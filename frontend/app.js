@@ -145,7 +145,115 @@ map.on("mousemove", function(event) {
 
 
 // ==========================================
-// 6. CARGAR ARCHIVO GEOJSON
+// 6. PANEL DINÁMICO DE CAPAS
+// ==========================================
+
+const layersContainer =
+    document.getElementById("layersContainer");
+
+
+function agregarCapaAlPanel(
+    nombre,
+    capa,
+    cantidad
+) {
+
+    const layerCard =
+        document.createElement("div");
+
+    layerCard.className =
+        "layer-card";
+
+
+    layerCard.innerHTML = `
+
+        <div class="layer-title">
+
+            <span class="layer-symbol">
+                ⬡
+            </span>
+
+            <strong>
+                ${nombre}
+            </strong>
+
+            <button class="visibility active">
+                ●
+            </button>
+
+        </div>
+
+
+        <div class="layer-info">
+
+            <span class="epsg">
+                CRS: No definido
+            </span>
+
+            <span>
+                ${cantidad} entidades
+            </span>
+
+        </div>
+
+    `;
+
+
+    layersContainer.appendChild(
+        layerCard
+    );
+
+
+    // ==========================================
+    // CONTROL DE VISIBILIDAD
+    // ==========================================
+
+    const visibilityButton =
+        layerCard.querySelector(
+            ".visibility"
+        );
+
+
+    visibilityButton.addEventListener(
+        "click",
+        function() {
+
+            if (
+                map.hasLayer(capa)
+            ) {
+
+                map.removeLayer(
+                    capa
+                );
+
+                visibilityButton.textContent =
+                    "○";
+
+                visibilityButton.classList
+                    .remove("active");
+
+            } else {
+
+                map.addLayer(
+                    capa
+                );
+
+                visibilityButton.textContent =
+                    "●";
+
+                visibilityButton.classList
+                    .add("active");
+
+            }
+
+        }
+    );
+
+}
+
+
+// ==========================================
+// 7. CARGAR ARCHIVO GEOJSON
 // ==========================================
 
 const uploadButton =
@@ -177,9 +285,15 @@ layerInput.addEventListener(
         }
 
 
-        // Verificar que sea GeoJSON
+        // ==========================================
+        // VERIFICAR EXTENSIÓN
+        // ==========================================
+
         const extension =
-            file.name.split(".").pop().toLowerCase();
+            file.name
+                .split(".")
+                .pop()
+                .toLowerCase();
 
 
         if (
@@ -195,7 +309,10 @@ layerInput.addEventListener(
         }
 
 
-        // Leer archivo
+        // ==========================================
+        // LEER ARCHIVO
+        // ==========================================
+
         const reader =
             new FileReader();
 
@@ -211,17 +328,25 @@ layerInput.addEventListener(
                         );
 
 
-                    // Crear capa
+                    // ==========================================
+                    // CREAR CAPA
+                    // ==========================================
+
                     const nuevaCapa =
                         L.geoJSON(
                             geojson,
                             {
 
                                 style: {
+
                                     color: "#087f72",
+
                                     weight: 2,
+
                                     fillOpacity: 0.25
+
                                 },
+
 
                                 pointToLayer:
                                     function(
@@ -232,15 +357,22 @@ layerInput.addEventListener(
                                         return L.circleMarker(
                                             latlng,
                                             {
+
                                                 radius: 7,
+
                                                 fillColor: "#e58b2a",
+
                                                 color: "#ffffff",
+
                                                 weight: 2,
+
                                                 fillOpacity: 0.95
+
                                             }
                                         );
 
                                     },
+
 
                                 onEachFeature:
                                     function(
@@ -278,19 +410,37 @@ layerInput.addEventListener(
                         );
 
 
-                    // Agregar al mapa
-                    nuevaCapa.addTo(map);
+                    // ==========================================
+                    // AGREGAR AL MAPA
+                    // ==========================================
+
+                    nuevaCapa.addTo(
+                        map
+                    );
 
 
-                    // Ajustar mapa a la nueva capa
+                    // ==========================================
+                    // AJUSTAR ZOOM
+                    // ==========================================
+
                     try {
 
-                        map.fitBounds(
-                            nuevaCapa.getBounds(),
-                            {
-                                padding: [30, 30]
-                            }
-                        );
+                        const bounds =
+                            nuevaCapa.getBounds();
+
+
+                        if (
+                            bounds.isValid()
+                        ) {
+
+                            map.fitBounds(
+                                bounds,
+                                {
+                                    padding: [30, 30]
+                                }
+                            );
+
+                        }
 
                     } catch (error) {
 
@@ -301,6 +451,27 @@ layerInput.addEventListener(
                     }
 
 
+                    // ==========================================
+                    // AGREGAR AL PANEL
+                    // ==========================================
+
+                    const cantidad =
+                        geojson.features
+                            ? geojson.features.length
+                            : 0;
+
+
+                    agregarCapaAlPanel(
+                        file.name,
+                        nuevaCapa,
+                        cantidad
+                    );
+
+
+                    // ==========================================
+                    // MENSAJE
+                    // ==========================================
+
                     console.log(
                         `Capa "${file.name}" cargada correctamente.`
                     );
@@ -310,8 +481,10 @@ layerInput.addEventListener(
                         `Capa "${file.name}" cargada correctamente.`
                     );
 
+                }
 
-                } catch (error) {
+
+                catch (error) {
 
                     console.error(
                         "Error leyendo GeoJSON:",
@@ -328,29 +501,8 @@ layerInput.addEventListener(
             };
 
 
-        reader.readAsText(file);
-
-    }
-);
-
-layerInput.addEventListener(
-    "change",
-    function(event) {
-
-        const file =
-            event.target.files[0];
-
-        if (!file) {
-            return;
-        }
-
-        console.log(
-            "Archivo seleccionado:",
-            file.name
-        );
-
-        alert(
-            `Archivo seleccionado: ${file.name}`
+        reader.readAsText(
+            file
         );
 
     }
