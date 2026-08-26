@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Mini Visor SIG</title>
+
+    <!-- Leaflet -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+
+    <!-- Estilos propios -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <!-- BARRA SUPERIOR -->
+    <header class="topbar">
+
+        <div class="brand">
+            <div class="logo">SIG</div>
+
+            <div>
+                <h1>Mini Visor SIG</h1>
+                <span>Plataforma Geoespacial · IGAC</span>
+            </div>
+        </div>
+
+        <div class="toolbar">
+
+            <button class="tool-button active">
+                ✥ Desplazar
+            </button>
+
+            <button class="tool-button">
+                ⊕ Capturar Coordenadas
+            </button>
+
+        </div>
+
+        <div class="top-info">
+
+            <div class="info-badge">
+                ◎ Coordenadas (0)
+            </div>
+
+            <div class="info-badge">
+                Leaflet 1.9 · Python
+            </div>
+
+        </div>
+
+    </header>
+
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="main-container">
+
+        <!-- PANEL IZQUIERDO -->
+        <aside class="sidebar">
+
+            <div class="sidebar-header">
+
+                <h2>▣ Panel de Capas</h2>
+
+                <span class="layer-counter">
+                    2/3 visibles
+                </span>
+
+            </div>
+
+
+            <!-- BOTÓN CARGAR -->
+            <div class="upload-container">
+
+                <button id="uploadButton" class="upload-button">
+                    ＋ Cargar capa
+                    <span>(GeoJSON / KML / SHP)</span>
+                </button>
+
+                <input
+                    type="file"
+                    id="layerInput"
+                    accept=".geojson,.json,.kml,.zip"
+                    hidden
+                >
+
+            </div>
+
+
+            <!-- CAPAS -->
+            <section class="layers">
+
+                <!-- CAPA 1 -->
+                <div class="layer-card">
+
+                    <div class="layer-title">
+                        <span class="layer-symbol">⬡</span>
+
+                        <strong>
+                            Colombia — Límite Nacional
+                        </strong>
+
+                        <button class="visibility active">
+                            ●
+                        </button>
+                    </div>
+
+                    <div class="layer-info">
+
+                        <span class="epsg">
+                            EPSG:4686
+                        </span>
+
+                        <span>
+                            MAGNA-SIRGAS Geog.
+                        </span>
+
+                    </div>
+
+                    <div class="entity-count">
+                        · 1 entidad
+                    </div>
+
+                </div>
+
+
+                <!-- CAPA 2 -->
+                <div class="layer-card">
+
+                    <div class="layer-title">
+
+                        <span class="layer-symbol">⬡</span>
+
+                        <strong>
+                            Capitales Departamentales
+                        </strong>
+
+                        <button class="visibility active">
+                            ●
+                        </button>
+
+                    </div>
+
+                    <div class="layer-info">
+
+                        <span class="epsg">
+                            EPSG:4326
+                        </span>
+
+                        <span>
+                            WGS 84 · 32 entidades
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <!-- CAPA 3 -->
+                <div class="layer-card disabled">
+
+                    <div class="layer-title">
+
+                        <span class="layer-symbol">⬡</span>
+
+                        <strong>
+                            Río Magdalena
+                        </strong>
+
+                        <button class="visibility">
+                            ○
+                        </button>
+
+                    </div>
+
+                    <div class="layer-info">
+
+                        <span class="epsg">
+                            EPSG:9377
+                        </span>
+
+                        <span>
+                            MAGNA-SIRGAS
+                        </span>
+
+                    </div>
+
+                    <div class="entity-count">
+                        · 3 entidades
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- CRS -->
+            <section class="crs-panel">
+
+                <h3>
+                    SISTEMA DE REFERENCIA DEL MAPA
+                </h3>
+
+                <div class="crs-value">
+
+                    <span class="epsg">
+                        EPSG:3857
+                    </span>
+
+                    <span>
+                        Web Mercator (Leaflet)
+                    </span>
+
+                </div>
+
+                <p>
+                    Las capas se visualizan en Web Mercator.
+                    CRS nativos preservados por atributo.
+                </p>
+
+            </section>
+
+        </aside>
+
+
+        <!-- MAPA -->
+        <section class="map-container">
+
+            <div id="map"></div>
+
+            <!-- INFORMACIÓN DEL CURSOR -->
+            <div id="cursor-info" class="cursor-info">
+                CURSOR: —
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- BARRA INFERIOR -->
+    <footer class="statusbar">
+
+        <div>
+            CRS MAPA:
+            <strong>EPSG:3857</strong>
+            · Web Mercator
+        </div>
+
+        <div>
+            CURSOR:
+            <strong id="coordinates">
+                —
+            </strong>
+        </div>
+
+        <div>
+            CAPAS VISIBLES:
+            <strong>2 de 3</strong>
+        </div>
+
+        <div>
+            HERRAMIENTA:
+            <strong>✥ Desplazar</strong>
+        </div>
+
+        <div>
+            MOTOR:
+            <strong>Leaflet 1.9 · Python</strong>
+        </div>
+
+    </footer>
+
+
+    <!-- Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- JavaScript propio -->
+    <script src="app.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,441 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f4f7f9;
+    color: #263746;
+    overflow: hidden;
+}
+
+
+/* =========================
+   BARRA SUPERIOR
+========================= */
+
+.topbar {
+    height: 72px;
+    background: #ffffff;
+    border-bottom: 1px solid #d9e2e8;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 20px;
+}
+
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+
+.logo {
+    width: 42px;
+    height: 42px;
+
+    background: #087f72;
+    color: white;
+
+    border-radius: 10px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-weight: 700;
+}
+
+
+.brand h1 {
+    font-size: 20px;
+    color: #253746;
+}
+
+
+.brand span {
+    font-size: 13px;
+    color: #7890a6;
+    letter-spacing: 0.5px;
+}
+
+
+.toolbar {
+    display: flex;
+    gap: 12px;
+}
+
+
+.tool-button {
+    border: 1px solid transparent;
+    background: transparent;
+
+    padding: 10px 16px;
+
+    border-radius: 8px;
+
+    font-size: 15px;
+    color: #58718a;
+
+    cursor: pointer;
+}
+
+
+.tool-button:hover {
+    background: #edf6f5;
+}
+
+
+.tool-button.active {
+    background: #e8f4f2;
+    border-color: #b8ddd8;
+    color: #087f72;
+}
+
+
+.top-info {
+    display: flex;
+    gap: 10px;
+}
+
+
+.info-badge {
+    border: 1px solid #d5e0e7;
+    border-radius: 8px;
+
+    padding: 9px 14px;
+
+    color: #71879b;
+    font-size: 14px;
+}
+
+
+/* =========================
+   CONTENEDOR
+========================= */
+
+.main-container {
+    display: flex;
+    height: calc(100vh - 112px);
+}
+
+
+/* =========================
+   SIDEBAR
+========================= */
+
+.sidebar {
+    width: 435px;
+    min-width: 435px;
+
+    background: #ffffff;
+
+    border-right: 1px solid #d9e2e8;
+
+    display: flex;
+    flex-direction: column;
+}
+
+
+.sidebar-header {
+    height: 62px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 18px;
+
+    border-bottom: 1px solid #e3e9ed;
+}
+
+
+.sidebar-header h2 {
+    font-size: 17px;
+}
+
+
+.layer-counter {
+    border: 1px solid #d7e2e9;
+    padding: 6px 9px;
+
+    border-radius: 7px;
+
+    color: #6d8398;
+    font-size: 13px;
+}
+
+
+/* =========================
+   CARGAR CAPA
+========================= */
+
+.upload-container {
+    padding: 16px;
+}
+
+
+.upload-button {
+    width: 100%;
+
+    padding: 15px;
+
+    background: #ffffff;
+
+    border: 2px dashed #c8d9e5;
+
+    border-radius: 8px;
+
+    color: #6c88a2;
+
+    font-size: 15px;
+
+    cursor: pointer;
+}
+
+
+.upload-button:hover {
+    border-color: #087f72;
+    color: #087f72;
+    background: #f5fbfa;
+}
+
+
+.upload-button span {
+    font-size: 13px;
+}
+
+
+/* =========================
+   CAPAS
+========================= */
+
+.layers {
+    padding: 0 10px;
+    overflow-y: auto;
+}
+
+
+.layer-card {
+    border: 1px solid #d8e2e8;
+
+    border-radius: 9px;
+
+    padding: 14px;
+
+    margin-bottom: 10px;
+
+    background: #ffffff;
+
+    box-shadow: 0 2px 5px rgba(30, 60, 80, 0.05);
+}
+
+
+.layer-card:hover {
+    border-color: #b8d9d5;
+}
+
+
+.layer-card.disabled {
+    opacity: 0.55;
+}
+
+
+.layer-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+
+.layer-title strong {
+    font-size: 15px;
+    flex: 1;
+}
+
+
+.layer-symbol {
+    color: #087f72;
+}
+
+
+.visibility {
+    width: 30px;
+    height: 30px;
+
+    border: 1px solid #d5e0e7;
+
+    background: #f7fafb;
+
+    color: #8ca0b0;
+
+    border-radius: 7px;
+
+    cursor: pointer;
+}
+
+
+.visibility.active {
+    background: #e3f2ef;
+    color: #087f72;
+}
+
+
+.layer-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    margin-top: 10px;
+
+    color: #7890a6;
+
+    font-size: 13px;
+}
+
+
+.epsg {
+    background: #e8f5f2;
+
+    border: 1px solid #c5e2dc;
+
+    color: #087f72;
+
+    padding: 4px 7px;
+
+    border-radius: 5px;
+
+    font-family: monospace;
+}
+
+
+.entity-count {
+    margin-top: 8px;
+
+    color: #899bab;
+
+    font-size: 13px;
+}
+
+
+/* =========================
+   CRS
+========================= */
+
+.crs-panel {
+    margin-top: auto;
+
+    border-top: 1px solid #dfe7ec;
+
+    padding: 18px;
+}
+
+
+.crs-panel h3 {
+    font-size: 13px;
+
+    color: #7189a0;
+
+    margin-bottom: 12px;
+
+    letter-spacing: 0.5px;
+}
+
+
+.crs-value {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    font-size: 14px;
+}
+
+
+.crs-panel p {
+    margin-top: 12px;
+
+    color: #8195a7;
+
+    font-size: 13px;
+
+    line-height: 1.5;
+}
+
+
+/* =========================
+   MAPA
+========================= */
+
+.map-container {
+    flex: 1;
+
+    position: relative;
+}
+
+
+#map {
+    width: 100%;
+    height: 100%;
+}
+
+
+/* =========================
+   CURSOR
+========================= */
+
+.cursor-info {
+    position: absolute;
+
+    bottom: 12px;
+    left: 12px;
+
+    background: rgba(255, 255, 255, 0.95);
+
+    border: 1px solid #d6e1e7;
+
+    padding: 8px 12px;
+
+    border-radius: 6px;
+
+    font-size: 13px;
+
+    color: #657c91;
+
+    z-index: 1000;
+}
+
+
+/* =========================
+   BARRA INFERIOR
+========================= */
+
+.statusbar {
+    height: 40px;
+
+    background: #ffffff;
+
+    border-top: 1px solid #d9e2e8;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding: 0 18px;
+
+    font-size: 12px;
+
+    color: #71879b;
+}
+
+
+.statusbar strong {
+    color: #087f72;
+}
