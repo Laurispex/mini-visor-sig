@@ -1,46 +1,87 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>Mini Visor SIG</title>
 
-    <!-- Leaflet -->
+
+    <!-- ==========================================
+         LEAFLET
+         ========================================== -->
+
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
+    >
 
-    <!-- Estilos propios -->
-    <link rel="stylesheet" href="styles.css">
+
+    <!-- ==========================================
+         ESTILOS PROPIOS
+         ========================================== -->
+
+    <link
+        rel="stylesheet"
+        href="styles.css"
+    >
+
 </head>
+
 
 <body>
 
-    <!-- BARRA SUPERIOR -->
+
+    <!-- ==========================================
+         BARRA SUPERIOR
+         ========================================== -->
+
     <header class="topbar">
 
         <div class="brand">
-            <div class="logo">SIG</div>
+
+            <div class="logo">
+                SIG
+            </div>
 
             <div>
-                <h1>Mini Visor SIG</h1>
-                <span>Plataforma Geoespacial · IGAC</span>
+
+                <h1>
+                    Mini Visor SIG
+                </h1>
+
+                <span>
+                    Plataforma Geoespacial · IGAC
+                </span>
+
             </div>
+
         </div>
+
 
         <div class="toolbar">
 
-            <button class="tool-button active">
+            <button
+                class="tool-button active"
+            >
                 ✥ Desplazar
             </button>
 
-            <button class="tool-button">
+
+            <button
+                class="tool-button"
+            >
                 ⊕ Capturar Coordenadas
             </button>
 
         </div>
+
 
         <div class="top-info">
 
@@ -57,15 +98,25 @@
     </header>
 
 
-    <!-- CONTENIDO PRINCIPAL -->
+    <!-- ==========================================
+         CONTENIDO PRINCIPAL
+         ========================================== -->
+
     <main class="main-container">
 
-        <!-- PANEL IZQUIERDO -->
+
+        <!-- ======================================
+             PANEL IZQUIERDO
+             ====================================== -->
+
         <aside class="sidebar">
+
 
             <div class="sidebar-header">
 
-                <h2>▣ Panel de Capas</h2>
+                <h2>
+                    ▣ Panel de Capas
+                </h2>
 
                 <span class="layer-counter">
                     2/3 visibles
@@ -74,13 +125,26 @@
             </div>
 
 
-            <!-- BOTÓN CARGAR -->
+            <!-- ==================================
+                 CARGAR CAPA
+                 ================================== -->
+
             <div class="upload-container">
 
-                <button id="uploadButton" class="upload-button">
+                <button
+                    id="uploadButton"
+                    class="upload-button"
+                    type="button"
+                >
+
                     ＋ Cargar capa
-                    <span>(GeoJSON / KML / SHP)</span>
+
+                    <span>
+                        (GeoJSON / KML / SHP)
+                    </span>
+
                 </button>
+
 
                 <input
                     type="file"
@@ -92,23 +156,39 @@
             </div>
 
 
-            <!-- CAPAS -->
-            <section class="layers" id="layersContainer">
+            <!-- ==================================
+                 CAPAS
+                 ================================== -->
+
+            <section
+                class="layers"
+                id="layersContainer"
+            >
+
 
                 <!-- CAPA 1 -->
+
                 <div class="layer-card">
 
                     <div class="layer-title">
-                        <span class="layer-symbol">⬡</span>
+
+                        <span class="layer-symbol">
+                            ⬡
+                        </span>
 
                         <strong>
                             Colombia — Límite Nacional
                         </strong>
 
-                        <button class="visibility active">
+                        <button
+                            class="visibility active"
+                            type="button"
+                        >
                             ●
                         </button>
+
                     </div>
+
 
                     <div class="layer-info">
 
@@ -122,6 +202,7 @@
 
                     </div>
 
+
                     <div class="entity-count">
                         · 1 entidad
                     </div>
@@ -130,21 +211,28 @@
 
 
                 <!-- CAPA 2 -->
+
                 <div class="layer-card">
 
                     <div class="layer-title">
 
-                        <span class="layer-symbol">⬡</span>
+                        <span class="layer-symbol">
+                            ⬡
+                        </span>
 
                         <strong>
                             Capitales Departamentales
                         </strong>
 
-                        <button class="visibility active">
+                        <button
+                            class="visibility active"
+                            type="button"
+                        >
                             ●
                         </button>
 
                     </div>
+
 
                     <div class="layer-info">
 
@@ -162,21 +250,28 @@
 
 
                 <!-- CAPA 3 -->
+
                 <div class="layer-card disabled">
 
                     <div class="layer-title">
 
-                        <span class="layer-symbol">⬡</span>
+                        <span class="layer-symbol">
+                            ⬡
+                        </span>
 
                         <strong>
                             Río Magdalena
                         </strong>
 
-                        <button class="visibility">
+                        <button
+                            class="visibility"
+                            type="button"
+                        >
                             ○
                         </button>
 
                     </div>
+
 
                     <div class="layer-info">
 
@@ -190,6 +285,7 @@
 
                     </div>
 
+
                     <div class="entity-count">
                         · 3 entidades
                     </div>
@@ -199,12 +295,16 @@
             </section>
 
 
-            <!-- CRS -->
+            <!-- ==================================
+                 CRS DEL MAPA
+                 ================================== -->
+
             <section class="crs-panel">
 
                 <h3>
                     SISTEMA DE REFERENCIA DEL MAPA
                 </h3>
+
 
                 <div class="crs-value">
 
@@ -218,9 +318,12 @@
 
                 </div>
 
+
                 <p>
-                    Las capas se visualizan en Web Mercator.
-                    CRS nativos preservados por atributo.
+                    Las capas se visualizan en
+                    Web Mercator.
+                    CRS nativos preservados
+                    por atributo.
                 </p>
 
             </section>
@@ -228,13 +331,19 @@
         </aside>
 
 
-        <!-- MAPA -->
+        <!-- ======================================
+             MAPA
+             ====================================== -->
+
         <section class="map-container">
 
             <div id="map"></div>
 
-            <!-- INFORMACIÓN DEL CURSOR -->
-            <div id="cursor-info" class="cursor-info">
+
+            <div
+                id="cursor-info"
+                class="cursor-info"
+            >
                 CURSOR: —
             </div>
 
@@ -243,45 +352,230 @@
     </main>
 
 
-    <!-- BARRA INFERIOR -->
+    <!-- ==========================================
+         VENTANA DE REPROYECCIÓN
+         ========================================== -->
+
+    <div
+        id="reprojectModal"
+        class="reproject-modal hidden"
+    >
+
+        <div class="reproject-window">
+
+
+            <!-- CABECERA -->
+
+            <div class="reproject-header">
+
+                <h2>
+                    Reproyectar capa
+                </h2>
+
+
+                <button
+                    id="closeReproject"
+                    class="close-button"
+                    type="button"
+                >
+                    ×
+                </button>
+
+            </div>
+
+
+            <!-- CONTENIDO -->
+
+            <div class="reproject-body">
+
+
+                <p
+                    id="reprojectLayerName"
+                    class="reproject-layer-name"
+                >
+                    Capa:
+                </p>
+
+
+                <div class="crs-field">
+
+                    <label>
+                        Sistema de referencia actual
+                    </label>
+
+
+                    <div
+                        id="currentCrs"
+                        class="current-crs"
+                    >
+                        EPSG:4326
+                    </div>
+
+                </div>
+
+
+                <div class="crs-field">
+
+                    <label for="targetCrs">
+                        Reproyectar a
+                    </label>
+
+
+                    <select id="targetCrs">
+
+                        <option value="">
+                            Seleccione un EPSG
+                        </option>
+
+
+                        <option value="EPSG:4326">
+                            EPSG:4326 — WGS 84
+                        </option>
+
+
+                        <option value="EPSG:3857">
+                            EPSG:3857 — Web Mercator
+                        </option>
+
+
+                        <option value="EPSG:3116">
+                            EPSG:3116 — MAGNA-SIRGAS Bogotá
+                        </option>
+
+
+                        <option value="EPSG:9377">
+                            EPSG:9377 — MAGNA-SIRGAS
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="reproject-warning">
+
+                    <strong>
+                        Nota:
+                    </strong>
+
+                    Debe seleccionar un sistema
+                    de referencia diferente
+                    al actual.
+
+                </div>
+
+            </div>
+
+
+            <!-- BOTONES -->
+
+            <div class="reproject-footer">
+
+                <button
+                    id="cancelReproject"
+                    class="cancel-button"
+                    type="button"
+                >
+                    Cancelar
+                </button>
+
+
+                <button
+                    id="confirmReproject"
+                    class="confirm-button"
+                    type="button"
+                >
+                    Reproyectar
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==========================================
+         BARRA INFERIOR
+         ========================================== -->
+
     <footer class="statusbar">
 
         <div>
+
             CRS MAPA:
-            <strong>EPSG:3857</strong>
+
+            <strong>
+                EPSG:3857
+            </strong>
+
             · Web Mercator
+
         </div>
 
+
         <div>
+
             CURSOR:
+
             <strong id="coordinates">
                 —
             </strong>
+
         </div>
 
+
         <div>
+
             CAPAS VISIBLES:
-            <strong>2 de 3</strong>
+
+            <strong>
+                2 de 3
+            </strong>
+
         </div>
 
+
         <div>
+
             HERRAMIENTA:
-            <strong>✥ Desplazar</strong>
+
+            <strong>
+                ✥ Desplazar
+            </strong>
+
         </div>
 
+
         <div>
+
             MOTOR:
-            <strong>Leaflet 1.9 · Python</strong>
+
+            <strong>
+                Leaflet 1.9 · Python
+            </strong>
+
         </div>
 
     </footer>
 
 
-    <!-- Leaflet -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- ==========================================
+         LEAFLET
+         ========================================== -->
 
-    <!-- JavaScript propio -->
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    ></script>
+
+
+    <!-- ==========================================
+         JAVASCRIPT PROPIO
+         ========================================== -->
+
     <script src="app.js"></script>
 
+
 </body>
+
 </html>
