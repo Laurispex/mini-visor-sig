@@ -145,7 +145,7 @@ map.on("mousemove", function(event) {
 
 
 // ==========================================
-// 6. CARGAR ARCHIVO
+// 6. CARGAR ARCHIVO GEOJSON
 // ==========================================
 
 const uploadButton =
@@ -164,6 +164,174 @@ uploadButton.addEventListener(
     }
 );
 
+
+layerInput.addEventListener(
+    "change",
+    function(event) {
+
+        const file =
+            event.target.files[0];
+
+        if (!file) {
+            return;
+        }
+
+
+        // Verificar que sea GeoJSON
+        const extension =
+            file.name.split(".").pop().toLowerCase();
+
+
+        if (
+            extension !== "geojson" &&
+            extension !== "json"
+        ) {
+
+            alert(
+                "Por ahora solo se pueden cargar archivos GeoJSON."
+            );
+
+            return;
+        }
+
+
+        // Leer archivo
+        const reader =
+            new FileReader();
+
+
+        reader.onload =
+            function(e) {
+
+                try {
+
+                    const geojson =
+                        JSON.parse(
+                            e.target.result
+                        );
+
+
+                    // Crear capa
+                    const nuevaCapa =
+                        L.geoJSON(
+                            geojson,
+                            {
+
+                                style: {
+                                    color: "#087f72",
+                                    weight: 2,
+                                    fillOpacity: 0.25
+                                },
+
+                                pointToLayer:
+                                    function(
+                                        feature,
+                                        latlng
+                                    ) {
+
+                                        return L.circleMarker(
+                                            latlng,
+                                            {
+                                                radius: 7,
+                                                fillColor: "#e58b2a",
+                                                color: "#ffffff",
+                                                weight: 2,
+                                                fillOpacity: 0.95
+                                            }
+                                        );
+
+                                    },
+
+                                onEachFeature:
+                                    function(
+                                        feature,
+                                        layer
+                                    ) {
+
+                                        const datos =
+                                            feature.properties || {};
+
+
+                                        let contenido =
+                                            "<strong>Información</strong><br><br>";
+
+
+                                        Object.entries(
+                                            datos
+                                        ).forEach(
+                                            ([clave, valor]) => {
+
+                                                contenido +=
+                                                    `<strong>${clave}:</strong> ${valor}<br>`;
+
+                                            }
+                                        );
+
+
+                                        layer.bindPopup(
+                                            contenido
+                                        );
+
+                                    }
+
+                            }
+                        );
+
+
+                    // Agregar al mapa
+                    nuevaCapa.addTo(map);
+
+
+                    // Ajustar mapa a la nueva capa
+                    try {
+
+                        map.fitBounds(
+                            nuevaCapa.getBounds(),
+                            {
+                                padding: [30, 30]
+                            }
+                        );
+
+                    } catch (error) {
+
+                        console.log(
+                            "No fue posible ajustar el zoom."
+                        );
+
+                    }
+
+
+                    console.log(
+                        `Capa "${file.name}" cargada correctamente.`
+                    );
+
+
+                    alert(
+                        `Capa "${file.name}" cargada correctamente.`
+                    );
+
+
+                } catch (error) {
+
+                    console.error(
+                        "Error leyendo GeoJSON:",
+                        error
+                    );
+
+
+                    alert(
+                        "El archivo no es un GeoJSON válido."
+                    );
+
+                }
+
+            };
+
+
+        reader.readAsText(file);
+
+    }
+);
 
 layerInput.addEventListener(
     "change",
