@@ -28,123 +28,93 @@ L.tileLayer(
 
 
 // ==========================================
-// 3. CIUDADES DE PRUEBA
+// 3. CARGAR CAPA GEOJSON DE PRUEBA
 // ==========================================
 
-const ciudades = [
+fetch("../data/ciudades.geojson")
+    .then(response => {
 
-    {
-        nombre: "Bogotá",
-        departamento: "Bogotá D.C.",
-        poblacion: "Dato de prueba",
-        lat: 4.7110,
-        lng: -74.0721
-    },
-
-    {
-        nombre: "Medellín",
-        departamento: "Antioquia",
-        poblacion: "Dato de prueba",
-        lat: 6.2442,
-        lng: -75.5812
-    },
-
-    {
-        nombre: "Cali",
-        departamento: "Valle del Cauca",
-        poblacion: "Dato de prueba",
-        lat: 3.4516,
-        lng: -76.5320
-    },
-
-    {
-        nombre: "Cartagena",
-        departamento: "Bolívar",
-        poblacion: "Dato de prueba",
-        lat: 10.3910,
-        lng: -75.4794
-    },
-
-    {
-        nombre: "Santa Marta",
-        departamento: "Magdalena",
-        poblacion: "Dato de prueba",
-        lat: 11.2408,
-        lng: -74.1990
-    }
-
-];
-
-
-// ==========================================
-// 4. CREAR PUNTOS
-// ==========================================
-
-ciudades.forEach(ciudad => {
-
-    const marker = L.circleMarker(
-        [ciudad.lat, ciudad.lng],
-        {
-            radius: 7,
-
-            fillColor: "#e58b2a",
-
-            color: "#ffffff",
-
-            weight: 2,
-
-            fillOpacity: 0.95
+        if (!response.ok) {
+            throw new Error("No se pudo cargar el GeoJSON");
         }
-    ).addTo(map);
 
+        return response.json();
 
-    // Información al pasar el cursor
-    marker.bindTooltip(
-        `
-        <strong>${ciudad.nombre}</strong><br>
-        Departamento: ${ciudad.departamento}<br>
-        Población: ${ciudad.poblacion}
-        `,
-        {
-            direction: "top"
-        }
-    );
+    })
+    .then(data => {
 
+        const ciudadesLayer = L.geoJSON(data, {
 
-    // Información al hacer clic
-    marker.bindPopup(
-        `
-        <div style="min-width: 190px">
+            pointToLayer: function(feature, latlng) {
 
-            <h3 style="margin-bottom: 8px;">
-                ${ciudad.nombre}
-            </h3>
+                return L.circleMarker(
+                    latlng,
+                    {
+                        radius: 7,
+                        fillColor: "#e58b2a",
+                        color: "#ffffff",
+                        weight: 2,
+                        fillOpacity: 0.95
+                    }
+                );
 
-            <p>
-                <strong>Departamento:</strong>
-                ${ciudad.departamento}
-            </p>
+            },
 
-            <p>
-                <strong>Población:</strong>
-                ${ciudad.poblacion}
-            </p>
+            onEachFeature: function(feature, layer) {
 
-            <p>
-                <strong>Latitud:</strong>
-                ${ciudad.lat}
-            </p>
+                const datos = feature.properties;
 
-            <p>
-                <strong>Longitud:</strong>
-                ${ciudad.lng}
-            </p>
+                layer.bindTooltip(
+                    `
+                    <strong>${datos.nombre}</strong><br>
+                    Departamento: ${datos.departamento}<br>
+                    Población: ${datos.poblacion}
+                    `,
+                    {
+                        direction: "top"
+                    }
+                );
 
-        </div>
-        `
-    );
+                layer.bindPopup(
+                    `
+                    <div style="min-width: 190px">
 
-});
+                        <h3>${datos.nombre}</h3>
+
+                        <p>
+                            <strong>Departamento:</strong>
+                            ${datos.departamento}
+                        </p>
+
+                        <p>
+                            <strong>Población:</strong>
+                            ${datos.poblacion}
+                        </p>
+
+                    </div>
+                    `
+                );
+
+            }
+
+        });
+
+        ciudadesLayer.addTo(map);
+
+        console.log(
+            "Capa GeoJSON cargada correctamente"
+        );
+
+    })
+    .catch(error => {
+
+        console.error(
+            "Error cargando la capa:",
+            error
+        );
+
+    });
+
 
 
 // ==========================================
