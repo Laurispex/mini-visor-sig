@@ -1,0 +1,364 @@
+{
+  "type": "FeatureCollection",
+  "name": "Capitales Departamentales",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "EPSG:4326"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Leticia",
+        "departamento": "Amazonas"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-69.9406, -4.2153]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Medellín",
+        "departamento": "Antioquia"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.5812, 6.2442]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Arauca",
+        "departamento": "Arauca"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-70.7591, 7.0903]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Barranquilla",
+        "departamento": "Atlántico"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-74.7813, 10.9685]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Cartagena de Indias",
+        "departamento": "Bolívar"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.4794, 10.391]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Tunja",
+        "departamento": "Boyacá"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-73.3576, 5.5353]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Manizales",
+        "departamento": "Caldas"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.5138, 5.0703]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Florencia",
+        "departamento": "Caquetá"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.6062, 1.6144]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Yopal",
+        "departamento": "Casanare"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-72.3959, 5.3378]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Popayán",
+        "departamento": "Cauca"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-76.6147, 2.4448]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Valledupar",
+        "departamento": "Cesar"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-73.2532, 10.4631]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Quibdó",
+        "departamento": "Chocó"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-76.6583, 5.6947]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Montería",
+        "departamento": "Córdoba"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.8785, 8.7479]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Bogotá D.C.",
+        "departamento": "Cundinamarca"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-74.0721, 4.711]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Inírida",
+        "departamento": "Guainía"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-67.9239, 3.8653]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "San José del Guaviare",
+        "departamento": "Guaviare"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-72.6459, 2.5729]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Neiva",
+        "departamento": "Huila"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.2819, 2.9273]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Riohacha",
+        "departamento": "La Guajira"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-72.907, 11.5444]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Santa Marta",
+        "departamento": "Magdalena"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-74.199, 11.2408]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Villavicencio",
+        "departamento": "Meta"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-73.6266, 4.142]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Pasto",
+        "departamento": "Nariño"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-77.2811, 1.2136]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Cúcuta",
+        "departamento": "Norte de Santander"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-72.5078, 7.8891]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Mocoa",
+        "departamento": "Putumayo"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-76.6472, 1.1528]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Armenia",
+        "departamento": "Quindío"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.6811, 4.5339]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Pereira",
+        "departamento": "Risaralda"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.6961, 4.8087]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "San Andrés",
+        "departamento": "San Andrés y Providencia"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-81.7006, 12.5847]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Bucaramanga",
+        "departamento": "Santander"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-73.1198, 7.1193]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Sincelejo",
+        "departamento": "Sucre"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.3978, 9.3047]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Ibagué",
+        "departamento": "Tolima"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.2322, 4.4389]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Cali",
+        "departamento": "Valle del Cauca"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-76.532, 3.4516]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Mitú",
+        "departamento": "Vaupés"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-70.1733, 1.2522]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Puerto Carreño",
+        "departamento": "Vichada"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-67.4698, 6.189]
+      }
+    }
+  ]
+}
