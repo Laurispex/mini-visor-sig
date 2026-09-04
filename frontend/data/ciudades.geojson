@@ -1,0 +1,47 @@
+{
+  "type": "FeatureCollection",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "EPSG:4326"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Bogotá",
+        "departamento": "Bogotá D.C.",
+        "poblacion": "Dato de prueba"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-74.0721, 4.7110]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Medellín",
+        "departamento": "Antioquia",
+        "poblacion": "Dato de prueba"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.5812, 6.2442]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Cali",
+        "departamento": "Valle del Cauca",
+        "poblacion": "Dato de prueba"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-76.5320, 3.4516]
+      }
+    }
+  ]
+}

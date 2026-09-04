@@ -628,7 +628,7 @@ function agregarCapaAlPanel(
 // ============================================================
 
 fetch(
-    "../data/capitales_departamentales.geojson"
+    "data/capitales_departamentales.geojson"
 )
 
     .then(
@@ -775,7 +775,7 @@ fetch(
 // ============================================================
 
 fetch(
-    "../data/ciudades.geojson"
+    "data/ciudades.geojson"
 )
 
     .then(
