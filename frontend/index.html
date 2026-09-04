@@ -69,6 +69,7 @@
 
             <button
                 class="tool-button active"
+                type="button"
             >
                 ✥ Desplazar
             </button>
@@ -76,6 +77,7 @@
 
             <button
                 class="tool-button"
+                type="button"
             >
                 ⊕ Capturar Coordenadas
             </button>
@@ -112,6 +114,8 @@
         <aside class="sidebar">
 
 
+            <!-- CABECERA DEL PANEL -->
+
             <div class="sidebar-header">
 
                 <h2>
@@ -119,7 +123,7 @@
                 </h2>
 
                 <span class="layer-counter">
-                    2/3 visibles
+                    Capas Visibles
                 </span>
 
             </div>
@@ -140,7 +144,7 @@
                     ＋ Cargar capa
 
                     <span>
-                        (GeoJSON / KML / SHP)
+                        (GeoJSON, KML, KMZ, SHP)
                     </span>
 
                 </button>
@@ -149,7 +153,7 @@
                 <input
                     type="file"
                     id="layerInput"
-                    accept=".geojson,.json,.kml,.zip"
+                    accept=".geojson,.json,.kml,.kmz,.zip,.shp"
                     hidden
                 >
 
@@ -166,7 +170,9 @@
             >
 
 
-                <!-- CAPA 1 -->
+                <!-- ==================================
+                     CAPA: COLOMBIA
+                     ================================== -->
 
                 <div class="layer-card">
 
@@ -210,7 +216,9 @@
                 </div>
 
 
-                <!-- CAPA 2 -->
+                <!-- ==================================
+                     CAPA: CAPITALES
+                     ================================== -->
 
                 <div class="layer-card">
 
@@ -249,7 +257,9 @@
                 </div>
 
 
-                <!-- CAPA 3 -->
+                <!-- ==================================
+                     CAPA: RÍO MAGDALENA
+                     ================================== -->
 
                 <div class="layer-card disabled">
 
@@ -292,6 +302,7 @@
 
                 </div>
 
+
             </section>
 
 
@@ -321,12 +332,12 @@
 
                 <p>
                     Las capas se visualizan en
-                    Web Mercator.
-                    CRS nativos preservados
-                    por atributo.
+                    Web Mercator. CRS nativos
+                    preservados por atributo.
                 </p>
 
             </section>
+
 
         </aside>
 
@@ -348,6 +359,7 @@
             </div>
 
         </section>
+
 
     </main>
 
@@ -397,6 +409,8 @@
                 </p>
 
 
+                <!-- CRS ACTUAL -->
+
                 <div class="crs-field">
 
                     <label>
@@ -413,6 +427,8 @@
 
                 </div>
 
+
+                <!-- CRS DESTINO -->
 
                 <div class="crs-field">
 
@@ -452,6 +468,8 @@
                 </div>
 
 
+                <!-- AVISO -->
+
                 <div class="reproject-warning">
 
                     <strong>
@@ -463,6 +481,7 @@
                     al actual.
 
                 </div>
+
 
             </div>
 
@@ -489,6 +508,7 @@
                 </button>
 
             </div>
+
 
         </div>
 
@@ -569,6 +589,13 @@
     ></script>
 
 
+    <!-- ==========================================
+         CONVERSORES: KMZ / KML / SHP → GEOJSON
+         ========================================== -->
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mapbox/togeojson@master/togeojson.js"></script>
+    <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
     <!-- ==========================================
          JAVASCRIPT PROPIO
          ========================================== -->
