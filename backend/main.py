@@ -1,30 +1,46 @@
-# ==========================================
+# ============================================================
 # MINI VISOR SIG - BACKEND
-# ==========================================
+# FastAPI + PyProj + MongoDB
+# ============================================================
 
-from typing import Any, Dict
-import math
+from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from pyproj import Transformer
+from pymongo import MongoClient
+from pyproj import Transformer, CRS
 
 
-# ==========================================
-# 1. CREAR APLICACIÓN
-# ==========================================
+# ============================================================
+# 1. CONFIGURACIÓN DE MONGODB
+# ============================================================
+
+MONGO_URI = "mongodb://127.0.0.1:27017"
+
+mongo_client = MongoClient(
+    MONGO_URI,
+    serverSelectionTimeoutMS=3000
+)
+
+db = mongo_client["mini_visor_sig"]
+municipios_collection = db["municipios"]
+
+
+# ============================================================
+# 2. CREAR APLICACIÓN FASTAPI
+# ============================================================
 
 app = FastAPI(
     title="Mini Visor SIG API",
-    description="Backend para procesamiento de información geográfica",
+    description="Backend del Mini Visor SIG",
     version="1.0.0"
 )
 
 
-# ==========================================
-# 2. CORS
-# ==========================================
+# ============================================================
+# 3. CONFIGURACIÓN CORS
+# ============================================================
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,259 +51,295 @@ app.add_middleware(
 )
 
 
-# ==========================================
-# 3. MODELO DE SOLICITUD
-# ==========================================
+# ============================================================
+# 4. MODELO DE SOLICITUD DE REPROYECCIÓN
+# ============================================================
 
 class ReprojectRequest(BaseModel):
-
     source_crs: str
-
     target_crs: str
+    geojson: dict
 
-    geojson: Dict[str, Any]
 
-
-# ==========================================
-# 4. TRANSFORMAR COORDENADAS
-# ==========================================
+# ============================================================
+# 5. TRANSFORMAR COORDENADAS
+# ============================================================
 
 def transformar_coordenadas(
-    coordenadas,
-    transformer
-):
+    coordenadas: Any,
+    transformer: Transformer
+) -> Any:
 
-    # ------------------------------------------
-    # Punto [x, y]
-    # ------------------------------------------
-
+    # Caso: [x, y]
     if (
         isinstance(coordenadas, list)
         and len(coordenadas) >= 2
         and isinstance(coordenadas[0], (int, float))
         and isinstance(coordenadas[1], (int, float))
     ):
-
-        x = coordenadas[0]
-
-        y = coordenadas[1]
-
-
-        nuevo_x, nuevo_y = transformer.transform(
-            x,
-            y
+        x, y = transformer.transform(
+            coordenadas[0],
+            coordenadas[1]
         )
-
-
-        # ------------------------------------------
-        # Verificar números válidos
-        # ------------------------------------------
-
-        if not (
-            math.isfinite(nuevo_x)
-            and math.isfinite(nuevo_y)
-        ):
-
-            raise ValueError(
-                f"Coordenadas inválidas generadas: "
-                f"{nuevo_x}, {nuevo_y}"
-            )
-
-
-        # ------------------------------------------
-        # Conservar Z si existe
-        # ------------------------------------------
-
-        if len(coordenadas) > 2:
-
-            return [
-                nuevo_x,
-                nuevo_y,
-                *coordenadas[2:]
-            ]
-
 
         return [
-            nuevo_x,
-            nuevo_y
+            float(x),
+            float(y)
         ]
 
+    # Caso: listas anidadas
+    if isinstance(coordenadas, list):
+        return [
+            transformar_coordenadas(
+                elemento,
+                transformer
+            )
+            for elemento in coordenadas
+        ]
 
-    # ------------------------------------------
-    # Líneas, polígonos, etc.
-    # ------------------------------------------
-
-    return [
-        transformar_coordenadas(
-            coordenada,
-            transformer
-        )
-        for coordenada in coordenadas
-    ]
+    return coordenadas
 
 
-# ==========================================
-# 5. REPROYECTAR GEOMETRÍA
-# ==========================================
+# ============================================================
+# 6. REPROYECTAR GEOMETRÍA
+# ============================================================
 
 def reproyectar_geometria(
-    geometria,
-    transformer
-):
+    geometria: dict,
+    transformer: Transformer
+) -> dict:
 
-    if geometria is None:
+    if not geometria:
+        return geometria
 
-        return None
+    geometria_nueva = geometria.copy()
 
+    # GeometryCollection
+    if geometria.get("type") == "GeometryCollection":
 
-    nueva_geometria = {
-        "type": geometria.get("type")
-    }
+        geometria_nueva["geometries"] = [
+            reproyectar_geometria(
+                geometry,
+                transformer
+            )
+            for geometry in geometria.get(
+                "geometries",
+                []
+            )
+        ]
 
+        return geometria_nueva
 
-    # ------------------------------------------
-    # Geometría con coordenadas
-    # ------------------------------------------
-
+    # Geometrías normales
     if "coordinates" in geometria:
 
-        nueva_geometria["coordinates"] = (
+        geometria_nueva["coordinates"] = (
             transformar_coordenadas(
                 geometria["coordinates"],
                 transformer
             )
         )
 
+    return geometria_nueva
 
-    return nueva_geometria
 
-
-# ==========================================
-# 6. REPROYECTAR GEOJSON
-# ==========================================
+# ============================================================
+# 7. REPROYECTAR GEOJSON COMPLETO
+# ============================================================
 
 def reproyectar_geojson(
-    geojson,
-    source_crs,
-    target_crs
-):
+    geojson: dict,
+    transformer: Transformer
+) -> dict:
 
-    transformer = Transformer.from_crs(
-        source_crs,
-        target_crs,
-        always_xy=True
-    )
+    resultado = geojson.copy()
 
+    # --------------------------------------------------------
+    # FeatureCollection
+    # --------------------------------------------------------
 
-    resultado = {
+    if geojson.get("type") == "FeatureCollection":
 
-        "type":
-            geojson.get(
-                "type",
-                "FeatureCollection"
-            ),
+        resultado["features"] = []
 
-        "features":
-            []
+        for feature in geojson.get("features", []):
 
-    }
+            feature_nueva = feature.copy()
 
+            if feature.get("geometry"):
 
-    # ------------------------------------------
-    # Procesar features
-    # ------------------------------------------
+                feature_nueva["geometry"] = (
+                    reproyectar_geometria(
+                        feature["geometry"],
+                        transformer
+                    )
+                )
 
-    for feature in geojson.get(
-        "features",
-        []
-    ):
-
-        nueva_feature = {
-
-            "type":
-                feature.get(
-                    "type",
-                    "Feature"
-                ),
-
-            "properties":
-                feature.get(
-                    "properties",
-                    {}
-                ),
-
-            "geometry":
-                None
-
-        }
-
-
-        geometria =feature.get(
-                "geometry"
+            resultado["features"].append(
+                feature_nueva
             )
 
+        return resultado
 
-        if geometria is not None:
+    # --------------------------------------------------------
+    # Feature
+    # --------------------------------------------------------
 
-            nueva_feature["geometry"] = (
+    if geojson.get("type") == "Feature":
+
+        if geojson.get("geometry"):
+
+            resultado["geometry"] = (
                 reproyectar_geometria(
-                    geometria,
+                    geojson["geometry"],
                     transformer
                 )
             )
 
+        return resultado
 
-        resultado["features"].append(
-            nueva_feature
+    # --------------------------------------------------------
+    # Geometry
+    # --------------------------------------------------------
+
+    if "coordinates" in geojson:
+
+        return reproyectar_geometria(
+            geojson,
+            transformer
         )
-
-
-    # ------------------------------------------
-    # CRS
-    # ------------------------------------------
-
-    resultado["crs"] = {
-
-        "type":
-            "name",
-
-        "properties": {
-
-            "name":
-                target_crs
-
-        }
-
-    }
-
 
     return resultado
 
 
-# ==========================================
-# 7. RUTA PRINCIPAL
-# ==========================================
+# ============================================================
+# 8. ACTUALIZAR CRS DEL GEOJSON
+# ============================================================
+
+def actualizar_crs(
+    geojson: dict,
+    crs: str
+) -> dict:
+
+    resultado = geojson.copy()
+
+    resultado["crs"] = {
+        "type": "name",
+        "properties": {
+            "name": crs
+        }
+    }
+
+    return resultado
+
+
+# ============================================================
+# 9. ENDPOINT PRINCIPAL
+# ============================================================
 
 @app.get("/")
 def inicio():
 
     return {
-
-        "mensaje":
-            "Mini Visor SIG API funcionando",
-
-        "version":
-            "1.0.0",
-
-        "estado":
-            "OK"
-
+        "success": True,
+        "message": "Mini Visor SIG API funcionando",
+        "version": "1.0.0"
     }
 
 
-# ==========================================
-# 8. ENDPOINT REPROYECCIÓN
-# ==========================================
+# ============================================================
+# 10. ENDPOINT DE SALUD
+# ============================================================
+
+@app.get("/health")
+def health():
+
+    try:
+
+        mongo_client.admin.command("ping")
+
+        return {
+            "success": True,
+            "api": "online",
+            "mongodb": "online"
+        }
+
+    except Exception as error:
+
+        return {
+            "success": True,
+            "api": "online",
+            "mongodb": "offline",
+            "error": str(error)
+        }
+
+
+# ============================================================
+# 11. OBTENER MUNICIPIOS DESDE MONGODB
+# ============================================================
+
+@app.get("/municipios")
+def obtener_municipios():
+    municipios = list(
+        db["municipios"].find(
+            {},
+            {"_id": 0}
+        )
+    )
+
+    return {
+        "success": True,
+        "total": len(municipios),
+        "municipios": municipios
+    }
+
+
+
+# ============================================================
+# 12. OBTENER UN MUNICIPIO POR CÓDIGO
+# ============================================================
+
+@app.get("/municipios/{codigo}")
+def obtener_municipio(codigo: str):
+
+    try:
+
+        municipio = municipios_collection.find_one(
+            {
+                "codigo": codigo
+            },
+            {
+                "_id": 0
+            }
+        )
+
+        if not municipio:
+
+            raise HTTPException(
+                status_code=404,
+                detail="Municipio no encontrado."
+            )
+
+        return {
+            "success": True,
+            "municipio": municipio
+        }
+
+    except HTTPException:
+
+        raise
+
+    except Exception as error:
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error consultando MongoDB: {str(error)}"
+        )
+
+
+# ============================================================
+# 13. REPROYECCIÓN
+# ============================================================
 
 @app.post("/reproject")
 def reproyectar(
@@ -296,81 +348,98 @@ def reproyectar(
 
     try:
 
-        # ==========================================
-        # VALIDAR
-        # ==========================================
+        # ----------------------------------------------------
+        # VALIDAR CRS
+        # ----------------------------------------------------
 
-        if (
+        source_crs = CRS.from_user_input(
             request.source_crs
-            ==
+        )
+
+        target_crs = CRS.from_user_input(
             request.target_crs
-        ):
+        )
+
+        # ----------------------------------------------------
+        # EVITAR MISMO CRS
+        # ----------------------------------------------------
+
+        if source_crs == target_crs:
 
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    "El CRS de origen y destino "
-                    "deben ser diferentes."
+                    "El CRS de destino debe ser "
+                    "diferente al CRS de origen."
                 )
             )
 
+        # ----------------------------------------------------
+        # TRANSFORMADOR
+        # ----------------------------------------------------
 
-        # ==========================================
-        # REPROYECCIÓN REAL
-        # ==========================================
-
-        geojson_reproyectado = (
-            reproyectar_geojson(
-                request.geojson,
-                request.source_crs,
-                request.target_crs
-            )
+        transformer = Transformer.from_crs(
+            source_crs,
+            target_crs,
+            always_xy=True
         )
 
+        # ----------------------------------------------------
+        # GEOJSON REPROYECTADO REALMENTE
+        # ----------------------------------------------------
 
-        # ==========================================
-        # TRANSFORMACIÓN PARA VISUALIZACIÓN
+        geojson_reproyectado = reproyectar_geojson(
+            request.geojson,
+            transformer
+        )
+
+        geojson_reproyectado = actualizar_crs(
+            geojson_reproyectado,
+            request.target_crs
+        )
+
+        # ----------------------------------------------------
+        # GEOJSON PARA VISUALIZACIÓN EN LEAFLET
         #
-        # EPSG destino → EPSG:4326
-        # ==========================================
+        # Leaflet trabaja normalmente con coordenadas
+        # geográficas WGS84 / EPSG:4326.
+        # ----------------------------------------------------
 
-        geojson_visualizacion = (
-            reproyectar_geojson(
-                geojson_reproyectado,
-                request.target_crs,
-                "EPSG:4326"
-            )
+        transformer_display = Transformer.from_crs(
+            target_crs,
+            CRS.from_epsg(4326),
+            always_xy=True
         )
 
+        display_geojson = reproyectar_geojson(
+            geojson_reproyectado,
+            transformer_display
+        )
 
-        # ==========================================
+        display_geojson = actualizar_crs(
+            display_geojson,
+            "EPSG:4326"
+        )
+
+        # ----------------------------------------------------
         # RESPUESTA
-        # ==========================================
+        # ----------------------------------------------------
 
         return {
+            "success": True,
 
-            "success":
-                True,
+            "source_crs": request.source_crs,
 
-            "source_crs":
-                request.source_crs,
+            "target_crs": request.target_crs,
 
-            "target_crs":
-                request.target_crs,
+            "geojson": geojson_reproyectado,
 
-            "geojson":
-                geojson_reproyectado,
-
-            "display_geojson":
-                geojson_visualizacion
-
+            "display_geojson": display_geojson
         }
-
 
     except HTTPException:
 
         raise
-
 
     except Exception as error:
 
@@ -378,7 +447,6 @@ def reproyectar(
             "ERROR EN REPROYECCIÓN:",
             error
         )
-
 
         raise HTTPException(
             status_code=500,
