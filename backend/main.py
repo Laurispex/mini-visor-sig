@@ -16,7 +16,9 @@ from pyproj import Transformer, CRS
 # 1. CONFIGURACIÓN DE MONGODB
 # ============================================================
 
-MONGO_URI = "mongodb://127.0.0.1:27017"
+import os
+
+MONGO_URI = os.getenv("MONGODB_URI", "mongodb://127.0.0.1:27017")
 
 mongo_client = MongoClient(
     MONGO_URI,
