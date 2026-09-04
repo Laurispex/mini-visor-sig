@@ -1226,7 +1226,7 @@ function abrirVentanaReproyeccion(
 
                     const response =
                         await fetch(
-                            "http://127.0.0.1:8000/reproject",
+                            "https://mini-visor-sig.onrender.com/reproject",
                             {
 
                                 method:
@@ -2539,7 +2539,7 @@ map.on(
 
                             const response =
                                 await fetch(
-                                    "http://127.0.0.1:8000/reproject",
+                                    "https://mini-visor-sig.onrender.com/reproject",
                                     {
 
                                         method:
@@ -3351,7 +3351,7 @@ function obtenerDepartamento(
 // ============================================================
 
 fetch(
-    "http://127.0.0.1:8000/municipios"
+    "https://mini-visor-sig.onrender.com/municipios"
 )
 
     .then(
