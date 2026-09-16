@@ -1,6 +1,6 @@
 # ============================================================
 # MINI VISOR SIG - BACKEND
-# FastAPI + PyProj + MongoDB
+# FastAPI + PyProj + Supabase/PostGIS
 # ============================================================
 
 from typing import Any
@@ -8,25 +8,68 @@ from typing import Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from pymongo import MongoClient
 from pyproj import Transformer, CRS
+import psycopg
 
 
 # ============================================================
-# 1. CONFIGURACIÓN DE MONGODB
+# 1. CONFIGURACIÓN DE SUPABASE / POSTGIS
 # ============================================================
 
 import os
 
-MONGO_URI = os.getenv("MONGODB_URI", "mongodb://127.0.0.1:27017")
+SUPABASE_DB_URL = os.getenv("SUPABASE_DB_URL")
 
-mongo_client = MongoClient(
-    MONGO_URI,
-    serverSelectionTimeoutMS=3000
-)
+# Estos nombres se toman del esquema importado desde QGIS. Al contener
+# espacios y un guion largo deben ir siempre entre comillas dobles en SQL.
+TABLA_CAPITALES = 'public."capitales_departamentales — Capitales Departamentales"'
+TABLA_CIUDADES = 'public."ciudades"'
+TABLA_MUNICIPIOS = 'public."municipios_atlas — municipios"'
 
-db = mongo_client["mini_visor_sig"]
-municipios_collection = db["municipios"]
+
+def obtener_conexion():
+    if not SUPABASE_DB_URL:
+        raise HTTPException(
+            status_code=500,
+            detail="Falta configurar SUPABASE_DB_URL en el backend."
+        )
+
+    return psycopg.connect(SUPABASE_DB_URL, connect_timeout=5)
+
+
+def obtener_feature_collection(tabla: str, columnas: str) -> dict:
+    """Convierte geometrías PostGIS reales a GeoJSON para Leaflet."""
+    consulta = f"""
+        SELECT {columnas}, ST_AsGeoJSON(geom)::json AS geometry
+        FROM {tabla}
+        WHERE geom IS NOT NULL
+        ORDER BY id
+    """
+
+    with obtener_conexion() as conexion:
+        with conexion.cursor(row_factory=psycopg.rows.dict_row) as cursor:
+            cursor.execute(consulta)
+            filas = cursor.fetchall()
+
+    return {
+        "type": "FeatureCollection",
+        "crs": {
+            "type": "name",
+            "properties": {"name": "EPSG:4326"}
+        },
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {
+                    clave: valor
+                    for clave, valor in fila.items()
+                    if clave != "geometry"
+                },
+                "geometry": fila["geometry"]
+            }
+            for fila in filas
+        ]
+    }
 
 
 # ============================================================
@@ -258,12 +301,14 @@ def health():
 
     try:
 
-        mongo_client.admin.command("ping")
+        with obtener_conexion() as conexion:
+            with conexion.cursor() as cursor:
+                cursor.execute("SELECT 1")
 
         return {
             "success": True,
             "api": "online",
-            "mongodb": "online"
+            "supabase_postgis": "online"
         }
 
     except Exception as error:
@@ -271,29 +316,54 @@ def health():
         return {
             "success": True,
             "api": "online",
-            "mongodb": "offline",
+            "supabase_postgis": "offline",
             "error": str(error)
         }
 
 
 # ============================================================
-# 11. OBTENER MUNICIPIOS DESDE MONGODB
+# 11. OBTENER CAPAS DESDE SUPABASE / POSTGIS
 # ============================================================
+
+@app.get("/capitales-departamentales")
+def obtener_capitales_departamentales():
+    try:
+        return obtener_feature_collection(TABLA_CAPITALES, "nombre, departamento")
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=f"Error consultando capitales en PostGIS: {str(error)}")
+
+
+@app.get("/ciudades")
+def obtener_ciudades():
+    try:
+        return obtener_feature_collection(TABLA_CIUDADES, "nombre, departamento, poblacion")
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=f"Error consultando ciudades en PostGIS: {str(error)}")
 
 @app.get("/municipios")
 def obtener_municipios():
-    municipios = list(
-        db["municipios"].find(
-            {},
-            {"_id": 0}
-        )
-    )
+    try:
+        consulta = f"""
+            SELECT codigo, nombre, codigo_departamento, poblacion_2018,
+                   ST_AsGeoJSON(geom)::json AS geometry
+            FROM {TABLA_MUNICIPIOS}
+            WHERE geom IS NOT NULL
+            ORDER BY codigo
+        """
+        with obtener_conexion() as conexion:
+            with conexion.cursor(row_factory=psycopg.rows.dict_row) as cursor:
+                cursor.execute(consulta)
+                municipios = cursor.fetchall()
 
-    return {
-        "success": True,
-        "total": len(municipios),
-        "municipios": municipios
-    }
+        return {"success": True, "total": len(municipios), "municipios": municipios}
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=f"Error consultando municipios en PostGIS: {str(error)}")
 
 
 
@@ -306,14 +376,16 @@ def obtener_municipio(codigo: str):
 
     try:
 
-        municipio = municipios_collection.find_one(
-            {
-                "codigo": codigo
-            },
-            {
-                "_id": 0
-            }
-        )
+        consulta = f"""
+            SELECT codigo, nombre, codigo_departamento, poblacion_2018,
+                   ST_AsGeoJSON(geom)::json AS geometry
+            FROM {TABLA_MUNICIPIOS}
+            WHERE codigo = %s
+        """
+        with obtener_conexion() as conexion:
+            with conexion.cursor(row_factory=psycopg.rows.dict_row) as cursor:
+                cursor.execute(consulta, (codigo,))
+                municipio = cursor.fetchone()
 
         if not municipio:
 
@@ -335,7 +407,7 @@ def obtener_municipio(codigo: str):
 
         raise HTTPException(
             status_code=500,
-            detail=f"Error consultando MongoDB: {str(error)}"
+            detail=f"Error consultando PostGIS: {str(error)}"
         )
 
 

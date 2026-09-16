@@ -628,7 +628,7 @@ function agregarCapaAlPanel(
 // ============================================================
 
 fetch(
-    "data/capitales_departamentales.geojson"
+    "https://mini-visor-sig.onrender.com/capitales-departamentales"
 )
 
     .then(
@@ -637,7 +637,7 @@ fetch(
             if (!response.ok) {
 
                 throw new Error(
-                    "No se pudo cargar capitales_departamentales.geojson"
+                    "No se pudieron cargar las capitales departamentales."
                 );
             }
 
@@ -775,7 +775,7 @@ fetch(
 // ============================================================
 
 fetch(
-    "data/ciudades.geojson"
+    "https://mini-visor-sig.onrender.com/ciudades"
 )
 
     .then(
@@ -784,7 +784,7 @@ fetch(
             if (!response.ok) {
 
                 throw new Error(
-                    "No se pudo cargar ciudades.geojson"
+                    "No se pudieron cargar las ciudades."
                 );
             }
 
@@ -3347,7 +3347,7 @@ function obtenerDepartamento(
 
 
 // ============================================================
-// MUNICIPIOS DESDE MONGODB
+// MUNICIPIOS DESDE SUPABASE / POSTGIS
 // ============================================================
 
 fetch(
@@ -3373,7 +3373,7 @@ fetch(
         function (resultado) {
 
             console.log(
-                "Municipios recibidos desde MongoDB:",
+                "Municipios recibidos desde Supabase/PostGIS:",
                 resultado.total
             );
 
