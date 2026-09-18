@@ -628,7 +628,7 @@ function agregarCapaAlPanel(
 // ============================================================
 
 fetch(
-    "https://mini-visor-sig.onrender.com/capitales-departamentales"
+    "http://127.0.0.1:8000/capitales-departamentales"
 )
 
     .then(
@@ -775,7 +775,7 @@ fetch(
 // ============================================================
 
 fetch(
-    "https://mini-visor-sig.onrender.com/ciudades"
+    "http://127.0.0.1:8000/ciudades"
 )
 
     .then(
@@ -1226,7 +1226,7 @@ function abrirVentanaReproyeccion(
 
                     const response =
                         await fetch(
-                            "https://mini-visor-sig.onrender.com/reproject",
+                            "http://127.0.0.1:8000/reproject",
                             {
 
                                 method:
@@ -2539,7 +2539,7 @@ map.on(
 
                             const response =
                                 await fetch(
-                                    "https://mini-visor-sig.onrender.com/reproject",
+                                    "http://127.0.0.1:8000/reproject",
                                     {
 
                                         method:
@@ -3351,7 +3351,7 @@ function obtenerDepartamento(
 // ============================================================
 
 fetch(
-    "https://mini-visor-sig.onrender.com/municipios"
+    "http://127.0.0.1:8000/municipios"
 )
 
     .then(
