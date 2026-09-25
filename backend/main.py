@@ -34,7 +34,8 @@ def obtener_conexion():
             detail="Falta configurar SUPABASE_DB_URL en el backend."
         )
 
-    return psycopg.connect(SUPABASE_DB_URL, connect_timeout=5)
+    # El Session Pooler puede tardar más en responder en redes domésticas.
+    return psycopg.connect(SUPABASE_DB_URL, connect_timeout=30)
 
 
 def obtener_feature_collection(tabla: str, columnas: str) -> dict:
@@ -354,10 +355,20 @@ def obtener_municipios():
             WHERE geom IS NOT NULL
             ORDER BY codigo
         """
+
+        # Un cursor del servidor transmite la respuesta gradualmente usando
+        # una única conexión. Así se conservan las geometrías originales sin
+        # abrir decenas de conexiones contra el Session Pooler.
+        municipios = []
         with obtener_conexion() as conexion:
-            with conexion.cursor(row_factory=psycopg.rows.dict_row) as cursor:
+            with conexion.cursor(
+                name="municipios_cursor",
+                row_factory=psycopg.rows.dict_row
+            ) as cursor:
                 cursor.execute(consulta)
-                municipios = cursor.fetchall()
+
+                while lote := cursor.fetchmany(5):
+                    municipios.extend(lote)
 
         return {"success": True, "total": len(municipios), "municipios": municipios}
     except HTTPException:
