@@ -1,40 +1,61 @@
 # ============================================================
 # MINI VISOR SIG - BACKEND
-# FastAPI + PyProj + Supabase/PostGIS
-# ============================================================
-
-from typing import Any
-
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from pyproj import Transformer, CRS
-import psycopg
-
-
-# ============================================================
-# 1. CONFIGURACIÓN DE SUPABASE / POSTGIS
+# FastAPI + Supabase/PostGIS
 # ============================================================
 
 import os
+import secrets
+from typing import Optional
+
+import psycopg
+from fastapi import FastAPI, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
+from pydantic import BaseModel
+
+
+# ============================================================
+# CONFIGURACIÓN
+# ============================================================
 
 SUPABASE_DB_URL = os.getenv("SUPABASE_DB_URL")
 
-# Estos nombres se toman del esquema importado desde QGIS. Al contener
-# espacios y un guion largo deben ir siempre entre comillas dobles en SQL.
+if not SUPABASE_DB_URL:
+    raise RuntimeError("No se encontró la variable de entorno SUPABASE_DB_URL")
+
+
+# Tabla de referencias con nombres reales del esquema importado.
 TABLA_CAPITALES = 'public."capitales_departamentales — Capitales Departamentales"'
 TABLA_CIUDADES = 'public."ciudades"'
 TABLA_MUNICIPIOS = 'public."municipios_atlas — municipios"'
 
 
-def obtener_conexion():
-    if not SUPABASE_DB_URL:
-        raise HTTPException(
-            status_code=500,
-            detail="Falta configurar SUPABASE_DB_URL en el backend."
-        )
+# ============================================================
+# FASTAPI
+# ============================================================
 
-    # El Session Pooler puede tardar más en responder en redes domésticas.
+app = FastAPI(
+    title="INVERSIG API",
+    description="API de Inteligencia Territorial",
+    version="1.0.0",
+)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ============================================================
+# CONEXIÓN A POSTGRESQL / SUPABASE
+# ============================================================
+
+
+def get_connection():
     return psycopg.connect(SUPABASE_DB_URL, connect_timeout=30)
 
 
@@ -47,7 +68,7 @@ def obtener_feature_collection(tabla: str, columnas: str) -> dict:
         ORDER BY id
     """
 
-    with obtener_conexion() as conexion:
+    with get_connection() as conexion:
         with conexion.cursor(row_factory=psycopg.rows.dict_row) as cursor:
             cursor.execute(consulta)
             filas = cursor.fetchall()
@@ -56,7 +77,7 @@ def obtener_feature_collection(tabla: str, columnas: str) -> dict:
         "type": "FeatureCollection",
         "crs": {
             "type": "name",
-            "properties": {"name": "EPSG:4326"}
+            "properties": {"name": "EPSG:4326"},
         },
         "features": [
             {
@@ -66,265 +87,58 @@ def obtener_feature_collection(tabla: str, columnas: str) -> dict:
                     for clave, valor in fila.items()
                     if clave != "geometry"
                 },
-                "geometry": fila["geometry"]
+                "geometry": fila["geometry"],
             }
             for fila in filas
-        ]
+        ],
     }
 
 
 # ============================================================
-# 2. CREAR APLICACIÓN FASTAPI
+# RUTA PRINCIPAL
 # ============================================================
 
-app = FastAPI(
-    title="Mini Visor SIG API",
-    description="Backend del Mini Visor SIG",
-    version="1.0.0"
-)
-
-
-# ============================================================
-# 3. CONFIGURACIÓN CORS
-# ============================================================
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-# ============================================================
-# 4. MODELO DE SOLICITUD DE REPROYECCIÓN
-# ============================================================
-
-class ReprojectRequest(BaseModel):
-    source_crs: str
-    target_crs: str
-    geojson: dict
-
-
-# ============================================================
-# 5. TRANSFORMAR COORDENADAS
-# ============================================================
-
-def transformar_coordenadas(
-    coordenadas: Any,
-    transformer: Transformer
-) -> Any:
-
-    # Caso: [x, y]
-    if (
-        isinstance(coordenadas, list)
-        and len(coordenadas) >= 2
-        and isinstance(coordenadas[0], (int, float))
-        and isinstance(coordenadas[1], (int, float))
-    ):
-        x, y = transformer.transform(
-            coordenadas[0],
-            coordenadas[1]
-        )
-
-        return [
-            float(x),
-            float(y)
-        ]
-
-    # Caso: listas anidadas
-    if isinstance(coordenadas, list):
-        return [
-            transformar_coordenadas(
-                elemento,
-                transformer
-            )
-            for elemento in coordenadas
-        ]
-
-    return coordenadas
-
-
-# ============================================================
-# 6. REPROYECTAR GEOMETRÍA
-# ============================================================
-
-def reproyectar_geometria(
-    geometria: dict,
-    transformer: Transformer
-) -> dict:
-
-    if not geometria:
-        return geometria
-
-    geometria_nueva = geometria.copy()
-
-    # GeometryCollection
-    if geometria.get("type") == "GeometryCollection":
-
-        geometria_nueva["geometries"] = [
-            reproyectar_geometria(
-                geometry,
-                transformer
-            )
-            for geometry in geometria.get(
-                "geometries",
-                []
-            )
-        ]
-
-        return geometria_nueva
-
-    # Geometrías normales
-    if "coordinates" in geometria:
-
-        geometria_nueva["coordinates"] = (
-            transformar_coordenadas(
-                geometria["coordinates"],
-                transformer
-            )
-        )
-
-    return geometria_nueva
-
-
-# ============================================================
-# 7. REPROYECTAR GEOJSON COMPLETO
-# ============================================================
-
-def reproyectar_geojson(
-    geojson: dict,
-    transformer: Transformer
-) -> dict:
-
-    resultado = geojson.copy()
-
-    # --------------------------------------------------------
-    # FeatureCollection
-    # --------------------------------------------------------
-
-    if geojson.get("type") == "FeatureCollection":
-
-        resultado["features"] = []
-
-        for feature in geojson.get("features", []):
-
-            feature_nueva = feature.copy()
-
-            if feature.get("geometry"):
-
-                feature_nueva["geometry"] = (
-                    reproyectar_geometria(
-                        feature["geometry"],
-                        transformer
-                    )
-                )
-
-            resultado["features"].append(
-                feature_nueva
-            )
-
-        return resultado
-
-    # --------------------------------------------------------
-    # Feature
-    # --------------------------------------------------------
-
-    if geojson.get("type") == "Feature":
-
-        if geojson.get("geometry"):
-
-            resultado["geometry"] = (
-                reproyectar_geometria(
-                    geojson["geometry"],
-                    transformer
-                )
-            )
-
-        return resultado
-
-    # --------------------------------------------------------
-    # Geometry
-    # --------------------------------------------------------
-
-    if "coordinates" in geojson:
-
-        return reproyectar_geometria(
-            geojson,
-            transformer
-        )
-
-    return resultado
-
-
-# ============================================================
-# 8. ACTUALIZAR CRS DEL GEOJSON
-# ============================================================
-
-def actualizar_crs(
-    geojson: dict,
-    crs: str
-) -> dict:
-
-    resultado = geojson.copy()
-
-    resultado["crs"] = {
-        "type": "name",
-        "properties": {
-            "name": crs
-        }
-    }
-
-    return resultado
-
-
-# ============================================================
-# 9. ENDPOINT PRINCIPAL
-# ============================================================
 
 @app.get("/")
-def inicio():
-
+def root():
     return {
-        "success": True,
-        "message": "Mini Visor SIG API funcionando",
-        "version": "1.0.0"
+        "proyecto": "INVERSIG",
+        "descripcion": "Inteligencia territorial",
+        "estado": "API funcionando",
+        "base_datos": "Supabase PostgreSQL + PostGIS",
     }
 
 
 # ============================================================
-# 10. ENDPOINT DE SALUD
+# HEALTH CHECK
 # ============================================================
+
 
 @app.get("/health")
 def health():
-
     try:
-
-        with obtener_conexion() as conexion:
-            with conexion.cursor() as cursor:
-                cursor.execute("SELECT 1")
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT version();")
+                version = cursor.fetchone()[0]
 
         return {
-            "success": True,
-            "api": "online",
-            "supabase_postgis": "online"
+            "status": "ok",
+            "database": "connected",
+            "postgresql": version,
         }
-
-    except Exception as error:
-
+    except Exception as exc:  # pragma: no cover - depende del entorno
         return {
-            "success": True,
-            "api": "online",
-            "supabase_postgis": "offline",
-            "error": str(error)
+            "status": "error",
+            "database": "disconnected",
+            "error": str(exc),
         }
 
 
 # ============================================================
-# 11. OBTENER CAPAS DESDE SUPABASE / POSTGIS
+# CAPAS DESDE POSTGIS / SUPABASE
 # ============================================================
+
 
 @app.get("/capitales-departamentales")
 def obtener_capitales_departamentales():
@@ -333,7 +147,10 @@ def obtener_capitales_departamentales():
     except HTTPException:
         raise
     except Exception as error:
-        raise HTTPException(status_code=500, detail=f"Error consultando capitales en PostGIS: {str(error)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error consultando capitales en PostGIS: {str(error)}",
+        )
 
 
 @app.get("/ciudades")
@@ -343,197 +160,389 @@ def obtener_ciudades():
     except HTTPException:
         raise
     except Exception as error:
-        raise HTTPException(status_code=500, detail=f"Error consultando ciudades en PostGIS: {str(error)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error consultando ciudades en PostGIS: {str(error)}",
+        )
+
+
+# ============================================================
+# MUNICIPIOS
+# ============================================================
+
 
 @app.get("/municipios")
 def obtener_municipios():
-    try:
-        consulta = f"""
-            SELECT codigo, nombre, codigo_departamento, poblacion_2018,
-                   ST_AsGeoJSON(geom)::json AS geometry
-            FROM {TABLA_MUNICIPIOS}
-            WHERE geom IS NOT NULL
-            ORDER BY codigo
-        """
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    id,
+                    codigo,
+                    codigo_departamento,
+                    nombre,
+                    poblacion_2018,
+                    fuente,
+                    ano_censo,
+                    gis.ST_AsGeoJSON(geom)::json AS geometry
+                FROM public.municipios
+                ORDER BY nombre;
+                """
+            )
+            filas = cursor.fetchall()
 
-        # Un cursor del servidor transmite la respuesta gradualmente usando
-        # una única conexión. Así se conservan las geometrías originales sin
-        # abrir decenas de conexiones contra el Session Pooler.
-        municipios = []
-        with obtener_conexion() as conexion:
-            with conexion.cursor(
-                name="municipios_cursor",
-                row_factory=psycopg.rows.dict_row
-            ) as cursor:
-                cursor.execute(consulta)
+    municipios = []
+    for fila in filas:
+        municipios.append(
+            {
+                "id": fila[0],
+                "codigo": fila[1],
+                "codigo_departamento": fila[2],
+                "nombre": fila[3],
+                "poblacion_2018": fila[4],
+                "fuente": fila[5],
+                "ano_censo": fila[6],
+                "geometry": fila[7],
+            }
+        )
 
-                while lote := cursor.fetchmany(5):
-                    municipios.extend(lote)
+    return municipios
 
-        return {"success": True, "total": len(municipios), "municipios": municipios}
-    except HTTPException:
-        raise
-    except Exception as error:
-        raise HTTPException(status_code=500, detail=f"Error consultando municipios en PostGIS: {str(error)}")
-
-
-
-# ============================================================
-# 12. OBTENER UN MUNICIPIO POR CÓDIGO
-# ============================================================
 
 @app.get("/municipios/{codigo}")
 def obtener_municipio(codigo: str):
-
-    try:
-
-        consulta = f"""
-            SELECT codigo, nombre, codigo_departamento, poblacion_2018,
-                   ST_AsGeoJSON(geom)::json AS geometry
-            FROM {TABLA_MUNICIPIOS}
-            WHERE codigo = %s
-        """
-        with obtener_conexion() as conexion:
-            with conexion.cursor(row_factory=psycopg.rows.dict_row) as cursor:
-                cursor.execute(consulta, (codigo,))
-                municipio = cursor.fetchone()
-
-        if not municipio:
-
-            raise HTTPException(
-                status_code=404,
-                detail="Municipio no encontrado."
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    id,
+                    codigo,
+                    codigo_departamento,
+                    nombre,
+                    departamento,
+                    poblacion_2018,
+                    area_km2,
+                    fuente,
+                    ano_censo,
+                    fecha_actualizacion,
+                    gis.ST_AsGeoJSON(geom)::json AS geometry
+                FROM public.municipios
+                WHERE codigo = %s;
+                """,
+                (codigo,),
             )
+            fila = cursor.fetchone()
 
-        return {
-            "success": True,
-            "municipio": municipio
-        }
+    if not fila:
+        return {"error": "Municipio no encontrado"}
 
-    except HTTPException:
-
-        raise
-
-    except Exception as error:
-
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error consultando PostGIS: {str(error)}"
-        )
+    return {
+        "id": fila[0],
+        "codigo": fila[1],
+        "codigo_departamento": fila[2],
+        "nombre": fila[3],
+        "departamento": fila[4],
+        "poblacion_2018": fila[5],
+        "area_km2": fila[6],
+        "fuente": fila[7],
+        "ano_censo": fila[8],
+        "fecha_actualizacion": fila[9],
+        "geometry": fila[10],
+    }
 
 
 # ============================================================
-# 13. REPROYECCIÓN
+# MUNICIPIOS - VECTOR TILES MVT
 # ============================================================
 
-@app.post("/reproject")
-def reproyectar(
-    request: ReprojectRequest
-):
 
-    try:
+@app.get("/municipios/tiles/{z}/{x}/{y}.pbf")
+def municipios_tile(z: int, x: int, y: int):
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                WITH bounds AS (
+                    SELECT gis.ST_TileEnvelope(%s, %s, %s) AS geom
+                ),
 
-        # ----------------------------------------------------
-        # VALIDAR CRS
-        # ----------------------------------------------------
-
-        source_crs = CRS.from_user_input(
-            request.source_crs
-        )
-
-        target_crs = CRS.from_user_input(
-            request.target_crs
-        )
-
-        # ----------------------------------------------------
-        # EVITAR MISMO CRS
-        # ----------------------------------------------------
-
-        if source_crs == target_crs:
-
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "El CRS de destino debe ser "
-                    "diferente al CRS de origen."
+                municipios AS (
+                    SELECT
+                        id,
+                        codigo,
+                        nombre,
+                        codigo_departamento,
+                        geom
+                    FROM public.municipios
+                    WHERE geom IS NOT NULL
                 )
+
+                SELECT gis.ST_AsMVT(tile, 'municipios', 4096, 'geom')
+                FROM (
+                    SELECT
+                        municipios.id,
+                        municipios.codigo,
+                        municipios.nombre,
+                        municipios.codigo_departamento,
+                        gis.ST_AsMVTGeom(
+                            gis.ST_Transform(municipios.geom, 3857),
+                            bounds.geom,
+                            4096,
+                            64,
+                            true
+                        ) AS geom
+                    FROM municipios
+                    CROSS JOIN bounds
+                    WHERE gis.ST_Intersects(
+                        gis.ST_Transform(municipios.geom, 3857),
+                        bounds.geom
+                    )
+                ) AS tile;
+                """,
+                (z, x, y),
             )
+            resultado = cursor.fetchone()[0]
 
-        # ----------------------------------------------------
-        # TRANSFORMADOR
-        # ----------------------------------------------------
+    if resultado is None:
+        resultado = b""
 
-        transformer = Transformer.from_crs(
-            source_crs,
-            target_crs,
-            always_xy=True
+    return Response(
+        content=bytes(resultado),
+        media_type="application/vnd.mapbox-vector-tile",
+    )
+
+
+@app.get("/municipios/{codigo}/normativa")
+def obtener_normativa_municipio(codigo: str):
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    id,
+                    codigo_municipio,
+                    tipo_instrumento,
+                    titulo,
+                    entidad_responsable,
+                    acto_administrativo,
+                    fecha_adopcion,
+                    fecha_vigencia,
+                    url_oficial,
+                    estado_verificacion,
+                    observaciones,
+                    fecha_verificacion,
+                    verificado_por,
+                    fuente_verificacion
+                FROM public.normativa_documentos
+                WHERE codigo_municipio = %s
+                ORDER BY tipo_instrumento, titulo;
+                """,
+                (codigo,),
+            )
+            filas = cursor.fetchall()
+
+    documentos = []
+    for fila in filas:
+        documentos.append(
+            {
+                "id": fila[0],
+                "codigo_municipio": fila[1],
+                "tipo_instrumento": fila[2],
+                "titulo": fila[3],
+                "entidad_responsable": fila[4],
+                "acto_administrativo": fila[5],
+                "fecha_adopcion": fila[6],
+                "fecha_vigencia": fila[7],
+                "url_oficial": fila[8],
+                "estado_verificacion": fila[9],
+                "observaciones": fila[10],
+                "fecha_verificacion": fila[11],
+                "verificado_por": fila[12],
+                "fuente_verificacion": fila[13],
+            }
         )
 
-        # ----------------------------------------------------
-        # GEOJSON REPROYECTADO REALMENTE
-        # ----------------------------------------------------
+    return {
+        "codigo_municipio": codigo,
+        "total_documentos": len(documentos),
+        "documentos": documentos,
+    }
 
-        geojson_reproyectado = reproyectar_geojson(
-            request.geojson,
-            transformer
+
+# ============================================================
+# INSTRUMENTOS DE ORDENAMIENTO REPORTADOS POR EL IGAC
+# ============================================================
+
+
+@app.get("/municipios/{codigo}/normativa/igac")
+def obtener_instrumentos_igac(codigo: str):
+    """Consulta los instrumentos reportados por el servicio del IGAC."""
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    objectid,
+                    codigo_municipio,
+                    municipio,
+                    departamento,
+                    id_ot,
+                    id_instrumento,
+                    tipo_instrumento,
+                    num_acto_administrativo,
+                    tipo_acto_administrativo,
+                    estado_instrumento,
+                    modificacion,
+                    tipo_modificacion,
+                    tipo_vigencia,
+                    vigencia_instrumento,
+                    estado_igac,
+                    estado_cartografia,
+                    fecha_adopcion,
+                    fecha_actualizacion_igac,
+                    fuente_igac
+                FROM public.vw_igac_instrumentos_normativa
+                WHERE codigo_municipio = %s
+                ORDER BY fecha_adopcion DESC NULLS LAST, id_instrumento, objectid;
+                """,
+                (codigo,),
+            )
+            filas = cursor.fetchall()
+
+    instrumentos = []
+    for fila in filas:
+        instrumentos.append(
+            {
+                "objectid": fila[0],
+                "codigo_municipio": fila[1],
+                "municipio": fila[2],
+                "departamento": fila[3],
+                "id_ot": fila[4],
+                "id_instrumento": fila[5],
+                "tipo_instrumento": fila[6],
+                "acto_administrativo": fila[7],
+                "tipo_acto_administrativo_codigo": fila[8],
+                "estado_instrumento_codigo": fila[9],
+                "modificacion": fila[10],
+                "tipo_modificacion_codigo": fila[11],
+                "tipo_vigencia_codigo": fila[12],
+                "vigencia_instrumento_codigo": fila[13],
+                "estado_igac_codigo": fila[14],
+                "estado_cartografia_codigo": fila[15],
+                "fecha_adopcion": fila[16],
+                "fecha_actualizacion_igac": fila[17],
+                "fuente_igac": fila[18],
+                "estado_verificacion_documental": "pendiente",
+            }
         )
 
-        geojson_reproyectado = actualizar_crs(
-            geojson_reproyectado,
-            request.target_crs
-        )
+    return {
+        "codigo_municipio": codigo,
+        "total_instrumentos_igac": len(instrumentos),
+        "nota": (
+            "Datos reportados por el IGAC. Los códigos de estado y acto "
+            "se conservan como códigos de origen; no equivalen por sí solos "
+            "a una verificación jurídica ni documental."
+        ),
+        "instrumentos": instrumentos,
+    }
 
-        # ----------------------------------------------------
-        # GEOJSON PARA VISUALIZACIÓN EN LEAFLET
-        #
-        # Leaflet trabaja normalmente con coordenadas
-        # geográficas WGS84 / EPSG:4326.
-        # ----------------------------------------------------
 
-        transformer_display = Transformer.from_crs(
-            target_crs,
-            CRS.from_epsg(4326),
-            always_xy=True
-        )
+class ActualizacionVerificacion(BaseModel):
+    estado_verificacion: str
+    verificado_por: Optional[str] = None
+    fuente_verificacion: Optional[str] = None
+    observaciones: Optional[str] = None
 
-        display_geojson = reproyectar_geojson(
-            geojson_reproyectado,
-            transformer_display
-        )
 
-        display_geojson = actualizar_crs(
-            display_geojson,
-            "EPSG:4326"
-        )
+@app.patch("/normativa/{documento_id}/verificacion")
+def actualizar_verificacion_normativa(
+    documento_id: int,
+    datos: ActualizacionVerificacion,
+    x_admin_token: Optional[str] = Header(default=None, alias="X-Admin-Token"),
+):
+    token_configurado = os.getenv("INVERSIG_ADMIN_TOKEN")
 
-        # ----------------------------------------------------
-        # RESPUESTA
-        # ----------------------------------------------------
-
-        return {
-            "success": True,
-
-            "source_crs": request.source_crs,
-
-            "target_crs": request.target_crs,
-
-            "geojson": geojson_reproyectado,
-
-            "display_geojson": display_geojson
-        }
-
-    except HTTPException:
-
-        raise
-
-    except Exception as error:
-
-        print(
-            "ERROR EN REPROYECCIÓN:",
-            error
-        )
-
+    if not token_configurado:
         raise HTTPException(
-            status_code=500,
-            detail=str(error)
+            status_code=503,
+            detail="La clave administrativa no está configurada",
         )
+
+    if not x_admin_token or not secrets.compare_digest(x_admin_token, token_configurado):
+        raise HTTPException(status_code=401, detail="No autorizado")
+
+    estados_permitidos = {"pendiente", "verificado", "desactualizado", "no_disponible"}
+    estado = datos.estado_verificacion.strip().lower()
+
+    if estado not in estados_permitidos:
+        raise HTTPException(status_code=400, detail="Estado de verificación no válido")
+
+    responsable = datos.verificado_por.strip() if datos.verificado_por else ""
+    fuente = datos.fuente_verificacion.strip() if datos.fuente_verificacion else ""
+
+    if estado != "pendiente" and (not responsable or not fuente):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Para cambiar el estado debes registrar "
+                "el responsable y la fuente consultada"
+            ),
+        )
+
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE public.normativa_documentos
+                SET
+                    estado_verificacion = %s,
+                    fecha_verificacion = CASE
+                        WHEN %s = 'pendiente' THEN NULL
+                        ELSE NOW()
+                    END,
+                    verificado_por = %s,
+                    fuente_verificacion = %s,
+                    observaciones = COALESCE(%s, observaciones),
+                    fecha_actualizacion = NOW()
+                WHERE id = %s
+                RETURNING
+                    id,
+                    codigo_municipio,
+                    estado_verificacion,
+                    fecha_verificacion,
+                    verificado_por,
+                    fuente_verificacion,
+                    observaciones;
+                """,
+                (
+                    estado,
+                    estado,
+                    responsable or None,
+                    fuente or None,
+                    datos.observaciones,
+                    documento_id,
+                ),
+            )
+            fila = cursor.fetchone()
+
+    if not fila:
+        raise HTTPException(status_code=404, detail="Documento normativo no encontrado")
+
+    return {
+        "mensaje": "Verificación documental actualizada",
+        "id": fila[0],
+        "codigo_municipio": fila[1],
+        "estado_verificacion": fila[2],
+        "fecha_verificacion": fila[3],
+        "verificado_por": fila[4],
+        "fuente_verificacion": fila[5],
+        "observaciones": fila[6],
+    }
+
+
+# ============================================================
+# FIN DEL BACKEND
+# ============================================================
