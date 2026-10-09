@@ -1,608 +1,321 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INVERSIG — Inteligencia territorial</title>
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
-    <title>Mini Visor SIG</title>
-
-
-    <!-- ==========================================
-         LEAFLET
-         ========================================== -->
-
-    <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    >
-
-
-    <!-- ==========================================
-         ESTILOS PROPIOS
-         ========================================== -->
-
-    <link
-        rel="stylesheet"
-        href="styles.css"
-    >
-
+    <link rel="stylesheet" href="styles.css">
 </head>
 
-
 <body>
-
-
-    <!-- ==========================================
-         BARRA SUPERIOR
-         ========================================== -->
-
     <header class="topbar">
-
         <div class="brand">
-
-            <div class="logo">
-                SIG
-            </div>
-
+            <div class="brand-mark">⌖</div>
             <div>
-
-                <h1>
-                    Mini Visor SIG
-                </h1>
-
-                <span>
-                    Plataforma Geoespacial · IGAC
-                </span>
-
+                <h1>INVERSIG</h1>
+                <span>Inteligencia territorial</span>
             </div>
-
         </div>
 
-
-        <div class="toolbar">
-
-            <button
-                class="tool-button active"
-                type="button"
-            >
-                ✥ Desplazar
-            </button>
-
-
-            <button
-                class="tool-button"
-                type="button"
-            >
-                ⊕ Capturar Coordenadas
-            </button>
-
+        <div class="global-search">
+            <span class="search-icon">⌕</span>
+            <input id="globalSearch"
+                   type="search"
+                   placeholder="Buscar municipio, dirección o coordenadas"
+                   autocomplete="off">
+            <kbd>Enter</kbd>
+            <div id="searchMessage" class="search-message" aria-live="polite"></div>
         </div>
 
-
-        <div class="top-info">
-
-            <div class="info-badge">
-                ◎ Coordenadas (0)
+        <div class="top-status">
+            <div class="data-status">
+                <span class="status-dot"></span>
+                <span>Datos<br>actualizados</span>
             </div>
-
-            <div class="info-badge">
-                Leaflet 1.9 · Python
-            </div>
-
+            <div class="avatar">AM</div>
         </div>
-
     </header>
 
+    <main class="app-shell">
+        <nav class="rail" aria-label="Navegación principal">
+            <button class="nav-item active" data-view="explore">
+                <span>⌂</span><small>Explorar</small>
+            </button>
+            <button class="nav-item" data-view="layers">
+                <span>▱</span><small>Capas</small>
+            </button>
+            <button class="nav-item" data-view="analysis">
+                <span>⌁</span><small>Análisis</small>
+            </button>
+        </nav>
 
-    <!-- ==========================================
-         CONTENIDO PRINCIPAL
-         ========================================== -->
+        <aside class="workspace-panel">
+            <!-- EXPLORAR -->
+            <section class="view-panel active" id="view-explore">
+                <div class="panel-heading">
+                    <div>
+                        <span class="eyebrow">OPORTUNIDADES</span>
+                        <h2>Explorar terrenos</h2>
+                    </div>
+                    <span class="count-pill" id="opportunityCount">—</span>
+                </div>
 
-    <main class="main-container">
+                <div class="filter-card">
+                    <label>
+                        Tipo de uso
+                        <select id="useFilter">
+                            <option value="">Todos</option>
+                            <option value="residencial">Residencial</option>
+                            <option value="comercial">Comercial</option>
+                            <option value="industrial">Industrial</option>
+                            <option value="agropecuario">Agropecuario</option>
+                        </select>
+                    </label>
 
+                    <div class="filter-row">
+                        <label>
+                            Área mínima
+                            <input id="minArea" type="number" min="0" placeholder="Ej. 5000">
+                        </label>
+                        <label>
+                            Presupuesto máximo
+                            <input id="maxBudget" type="number" min="0" placeholder="$">
+                        </label>
+                    </div>
 
-        <!-- ======================================
-             PANEL IZQUIERDO
-             ====================================== -->
+                    <button id="applyFilters" class="primary-button" type="button">
+                        ✦ Aplicar filtros
+                    </button>
 
-        <aside class="sidebar">
+                    <p class="data-note">
+                        Los resultados de terrenos se conectarán únicamente a datos reales y verificables.
+                    </p>
+                </div>
 
+                <div class="section-heading">
+                    <div>
+                        <h3>Mejores oportunidades</h3>
+                        <span id="opportunityStatus">Sin fuente de terrenos conectada todavía</span>
+                    </div>
+                </div>
 
-            <!-- CABECERA DEL PANEL -->
+                <div id="opportunityList" class="empty-state">
+                    <div class="empty-icon">⌖</div>
+                    <strong>Sin oportunidades cargadas</strong>
+                    <p>
+                        Esta sección queda preparada para recibir terrenos reales
+                        desde la base de datos.
+                    </p>
+                </div>
 
-            <div class="sidebar-header">
+                <div class="sig-tools-card">
+                    <div>
+                        <span class="eyebrow">HERRAMIENTAS SIG</span>
+                        <strong>Las funciones técnicas se mantienen</strong>
+                        <p>Carga de capas, coordenadas y reproyección continúan disponibles.</p>
+                    </div>
+                    <button class="secondary-button" data-view-target="layers">Ver capas</button>
+                </div>
+            </section>
 
-                <h2>
-                    ▣ Panel de Capas
-                </h2>
+            <!-- CAPAS -->
+            <section class="view-panel" id="view-layers">
+                <div class="panel-heading">
+                    <div>
+                        <span class="eyebrow">SISTEMA GEOGRÁFICO</span>
+                        <h2>Capas del mapa</h2>
+                    </div>
+                    <span class="count-pill" id="layer-count">0</span>
+                </div>
 
-                <span class="layer-counter">
-                    Capas Visibles
-                </span>
-
-            </div>
-
-
-            <!-- ==================================
-                 CARGAR CAPA
-                 ================================== -->
-
-            <div class="upload-container">
-
-                <button
-                    id="uploadButton"
-                    class="upload-button"
-                    type="button"
-                >
-
-                    ＋ Cargar capa
-
+                <button id="uploadButton" class="upload-button" type="button">
+                    <span class="upload-icon">↥</span>
                     <span>
-                        (GeoJSON, KML, KMZ, SHP)
+                        <strong>Cargar capa</strong>
+                        <small>GeoJSON, KML o SHP/ZIP compatible</small>
                     </span>
-
                 </button>
 
+                <input type="file"
+                       id="layerInput"
+                       accept=".geojson,.json,.kml,.zip"
+                       hidden>
 
-                <input
-                    type="file"
-                    id="layerInput"
-                    accept=".geojson,.json,.kml,.kmz,.zip,.shp"
-                    hidden
-                >
-
-            </div>
-
-
-            <!-- ==================================
-                 CAPAS
-                 ================================== -->
-
-            <section
-                class="layers"
-                id="layersContainer"
-            >
-
-
-                <!-- ==================================
-                     CAPA: COLOMBIA
-                     ================================== -->
-
-                <div class="layer-card">
-
-                    <div class="layer-title">
-
-                        <span class="layer-symbol">
-                            ⬡
-                        </span>
-
-                        <strong>
-                            Colombia — Límite Nacional
-                        </strong>
-
-                        <button
-                            class="visibility active"
-                            type="button"
-                        >
-                            ●
-                        </button>
-
+                <section class="layers" id="layersContainer">
+                    <div class="layer-card">
+                        <div class="layer-title">
+                            <span class="layer-symbol">⬡</span>
+                            <strong>Colombia — Límite Nacional</strong>
+                            <button class="visibility active" type="button">●</button>
+                        </div>
+                        <div class="layer-info">
+                            <span class="epsg">EPSG:4686</span>
+                            <span>MAGNA-SIRGAS Geog.</span>
+                        </div>
+                        <div class="entity-count">· 1 entidad</div>
                     </div>
 
-
-                    <div class="layer-info">
-
-                        <span class="epsg">
-                            EPSG:4686
-                        </span>
-
-                        <span>
-                            MAGNA-SIRGAS Geog.
-                        </span>
-
+                    <div class="layer-card">
+                        <div class="layer-title">
+                            <span class="layer-symbol">⬡</span>
+                            <strong>Capitales Departamentales</strong>
+                            <button class="visibility active" type="button">●</button>
+                        </div>
+                        <div class="layer-info">
+                            <span class="epsg">EPSG:4326</span>
+                            <span>WGS 84 · 32 entidades</span>
+                        </div>
                     </div>
 
-
-                    <div class="entity-count">
-                        · 1 entidad
+                    <div class="layer-card disabled">
+                        <div class="layer-title">
+                            <span class="layer-symbol">⬡</span>
+                            <strong>Río Magdalena</strong>
+                            <button class="visibility" type="button">○</button>
+                        </div>
+                        <div class="layer-info">
+                            <span class="epsg">EPSG:9377</span>
+                            <span>MAGNA-SIRGAS</span>
+                        </div>
+                        <div class="entity-count">· 3 entidades</div>
                     </div>
+                </section>
 
-                </div>
-
-
-                <!-- ==================================
-                     CAPA: CAPITALES
-                     ================================== -->
-
-                <div class="layer-card">
-
-                    <div class="layer-title">
-
-                        <span class="layer-symbol">
-                            ⬡
-                        </span>
-
-                        <strong>
-                            Capitales Departamentales
-                        </strong>
-
-                        <button
-                            class="visibility active"
-                            type="button"
-                        >
-                            ●
-                        </button>
-
+                <section class="crs-panel">
+                    <span class="eyebrow">SISTEMA DE REFERENCIA</span>
+                    <div class="crs-value">
+                        <span class="epsg">EPSG:3857</span>
+                        <span>Web Mercator · Leaflet</span>
                     </div>
-
-
-                    <div class="layer-info">
-
-                        <span class="epsg">
-                            EPSG:4326
-                        </span>
-
-                        <span>
-                            WGS 84 · 32 entidades
-                        </span>
-
-                    </div>
-
-                </div>
-
-
-                <!-- ==================================
-                     CAPA: RÍO MAGDALENA
-                     ================================== -->
-
-                <div class="layer-card disabled">
-
-                    <div class="layer-title">
-
-                        <span class="layer-symbol">
-                            ⬡
-                        </span>
-
-                        <strong>
-                            Río Magdalena
-                        </strong>
-
-                        <button
-                            class="visibility"
-                            type="button"
-                        >
-                            ○
-                        </button>
-
-                    </div>
-
-
-                    <div class="layer-info">
-
-                        <span class="epsg">
-                            EPSG:9377
-                        </span>
-
-                        <span>
-                            MAGNA-SIRGAS
-                        </span>
-
-                    </div>
-
-
-                    <div class="entity-count">
-                        · 3 entidades
-                    </div>
-
-                </div>
-
-
+                    <p>Las capas conservan su CRS nativo y pueden reproyectarse mediante Python + PyProj.</p>
+                </section>
             </section>
 
-
-            <!-- ==================================
-                 CRS DEL MAPA
-                 ================================== -->
-
-            <section class="crs-panel">
-
-                <h3>
-                    SISTEMA DE REFERENCIA DEL MAPA
-                </h3>
-
-
-                <div class="crs-value">
-
-                    <span class="epsg">
-                        EPSG:3857
-                    </span>
-
-                    <span>
-                        Web Mercator (Leaflet)
-                    </span>
-
+            <!-- ANÁLISIS -->
+            <section class="view-panel" id="view-analysis">
+                <div class="panel-heading">
+                    <div>
+                        <span class="eyebrow">ANÁLISIS TERRITORIAL</span>
+                        <h2>Análisis de mercado</h2>
+                    </div>
                 </div>
 
+                <div class="analysis-empty">
+                    <div class="analysis-icon">⌁</div>
+                    <h3>Selecciona un terreno</h3>
+                    <p>
+                        El análisis se construirá a partir de información real:
+                        precio de oferta, área, uso del suelo, accesibilidad,
+                        fuentes y fecha de actualización.
+                    </p>
+                </div>
 
-                <p>
-                    Las capas se visualizan en
-                    Web Mercator. CRS nativos
-                    preservados por atributo.
-                </p>
+                <div class="metric-grid">
+                    <article>
+                        <span>Mercado</span>
+                        <strong>—</strong>
+                        <small>Sin datos conectados</small>
+                    </article>
+                    <article>
+                        <span>Conectividad vial</span>
+                        <strong>—</strong>
+                        <small>Se calculará con datos SIG</small>
+                    </article>
+                    <article>
+                        <span>Uso del suelo</span>
+                        <strong>—</strong>
+                        <small>Fuente normativa</small>
+                    </article>
+                    <article>
+                        <span>Potencial</span>
+                        <strong>—</strong>
+                        <small>No se inventarán valores</small>
+                    </article>
+                </div>
 
+                <div class="method-card">
+                    <strong>Metodología INVERSIG</strong>
+                    <p>
+                        El índice de oportunidad se implementará después de definir
+                        las variables, pesos y fuentes. No se utilizarán cifras ficticias.
+                    </p>
+                </div>
             </section>
-
-
         </aside>
 
-
-        <!-- ======================================
-             MAPA
-             ====================================== -->
-
         <section class="map-container">
+            <div class="map-tools">
+                <button class="map-tool active" title="Mapa">⌖</button>
+                <button class="map-tool" title="Capturar coordenadas" id="mapCaptureButton">⌖</button>
+            </div>
 
             <div id="map"></div>
 
+            <div id="cursor-info" class="cursor-info">CURSOR: —</div>
 
-            <div
-                id="cursor-info"
-                class="cursor-info"
-            >
-                CURSOR: —
+            <div class="map-crs-badge">
+                EPSG:3857 · Colombia
             </div>
-
         </section>
-
-
     </main>
 
-
-    <!-- ==========================================
-         VENTANA DE REPROYECCIÓN
-         ========================================== -->
-
-    <div
-        id="reprojectModal"
-        class="reproject-modal hidden"
-    >
-
-        <div class="reproject-window">
-
-
-            <!-- CABECERA -->
-
-            <div class="reproject-header">
-
-                <h2>
-                    Reproyectar capa
-                </h2>
-
-
-                <button
-                    id="closeReproject"
-                    class="close-button"
-                    type="button"
-                >
-                    ×
-                </button>
-
-            </div>
-
-
-            <!-- CONTENIDO -->
-
-            <div class="reproject-body">
-
-
-                <p
-                    id="reprojectLayerName"
-                    class="reproject-layer-name"
-                >
-                    Capa:
-                </p>
-
-
-                <!-- CRS ACTUAL -->
-
-                <div class="crs-field">
-
-                    <label>
-                        Sistema de referencia actual
-                    </label>
-
-
-                    <div
-                        id="currentCrs"
-                        class="current-crs"
-                    >
-                        EPSG:4326
-                    </div>
-
-                </div>
-
-
-                <!-- CRS DESTINO -->
-
-                <div class="crs-field">
-
-                    <label for="targetCrs">
-                        Reproyectar a
-                    </label>
-
-
-                    <select id="targetCrs">
-
-                        <option value="">
-                            Seleccione un EPSG
-                        </option>
-
-
-                        <option value="EPSG:4326">
-                            EPSG:4326 — WGS 84
-                        </option>
-
-
-                        <option value="EPSG:3857">
-                            EPSG:3857 — Web Mercator
-                        </option>
-
-
-                        <option value="EPSG:3116">
-                            EPSG:3116 — MAGNA-SIRGAS Bogotá
-                        </option>
-
-
-                        <option value="EPSG:9377">
-                            EPSG:9377 — MAGNA-SIRGAS
-                        </option>
-
-                    </select>
-
-                </div>
-
-
-                <!-- AVISO -->
-
-                <div class="reproject-warning">
-
-                    <strong>
-                        Nota:
-                    </strong>
-
-                    Debe seleccionar un sistema
-                    de referencia diferente
-                    al actual.
-
-                </div>
-
-
-            </div>
-
-
-            <!-- BOTONES -->
-
-            <div class="reproject-footer">
-
-                <button
-                    id="cancelReproject"
-                    class="cancel-button"
-                    type="button"
-                >
-                    Cancelar
-                </button>
-
-
-                <button
-                    id="confirmReproject"
-                    class="confirm-button"
-                    type="button"
-                >
-                    Reproyectar
-                </button>
-
-            </div>
-
-
-        </div>
-
+    <!-- Mantener los botones que app.js utiliza para captura -->
+    <div class="legacy-tools" aria-hidden="true">
+        <button class="tool-button active" type="button">✥ Desplazar</button>
+        <button class="tool-button" type="button">⊕ Capturar Coordenadas</button>
+        <div class="info-badge">◎ Coordenadas (0)</div>
     </div>
 
+    <div id="coordinates" class="hidden-coordinate-value">—</div>
 
-    <!-- ==========================================
-         BARRA INFERIOR
-         ========================================== -->
+    <div id="reprojectModal" class="reproject-modal hidden">
+        <div class="reproject-window">
+            <div class="reproject-header">
+                <h2>Reproyectar capa</h2>
+                <button id="closeReproject" class="close-button" type="button">×</button>
+            </div>
+            <div class="reproject-body">
+                <p id="reprojectLayerName" class="reproject-layer-name">Capa:</p>
+                <div class="crs-field">
+                    <label>Sistema de referencia actual</label>
+                    <div id="currentCrs" class="current-crs">EPSG:4326</div>
+                </div>
+                <div class="crs-field">
+                    <label for="targetCrs">Reproyectar a</label>
+                    <select id="targetCrs">
+                        <option value="">Seleccione un EPSG</option>
+                        <option value="EPSG:4326">EPSG:4326 — WGS 84</option>
+                        <option value="EPSG:3857">EPSG:3857 — Web Mercator</option>
+                        <option value="EPSG:3116">EPSG:3116 — MAGNA-SIRGAS Bogotá</option>
+                        <option value="EPSG:9377">EPSG:9377 — MAGNA-SIRGAS</option>
+                    </select>
+                </div>
+                <div class="reproject-warning">
+                    <strong>Nota:</strong> el CRS de destino debe ser diferente al actual.
+                </div>
+            </div>
+            <div class="reproject-footer">
+                <button id="cancelReproject" class="cancel-button" type="button">Cancelar</button>
+                <button id="confirmReproject" class="confirm-button" type="button">Reproyectar</button>
+            </div>
+        </div>
+    </div>
 
     <footer class="statusbar">
-
-        <div>
-
-            CRS MAPA:
-
-            <strong>
-                EPSG:3857
-            </strong>
-
-            · Web Mercator
-
-        </div>
-
-
-        <div>
-
-            CURSOR:
-
-            <strong id="coordinates">
-                —
-            </strong>
-
-        </div>
-
-
-        <div>
-
-            CAPAS VISIBLES:
-
-            <strong>
-                2 de 3
-            </strong>
-
-        </div>
-
-
-        <div>
-
-            HERRAMIENTA:
-
-            <strong>
-                ✥ Desplazar
-            </strong>
-
-        </div>
-
-
-        <div>
-
-            MOTOR:
-
-            <strong>
-                Leaflet 1.9 · Python
-            </strong>
-
-        </div>
-
+        <div>CRS MAPA: <strong>EPSG:3857</strong> · Web Mercator</div>
+        <div>CURSOR: <strong id="statusCoordinates">—</strong></div>
+        <div>CAPAS VISIBLES: <strong id="visibleLayers">—</strong></div>
+        <div>HERRAMIENTA: <strong>✥ Desplazar</strong></div>
+        <div>MOTOR: <strong>Leaflet 1.9 · Python</strong></div>
     </footer>
 
-
-    <!-- ==========================================
-         LEAFLET
-         ========================================== -->
-
-    <script
-        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    ></script>
-
-
-    <!-- ==========================================
-         CONVERSORES: KMZ / KML / SHP → GEOJSON
-         ========================================== -->
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/mapbox/togeojson@master/togeojson.js"></script>
-    <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
-    <!-- ==========================================
-         JAVASCRIPT PROPIO
-         ========================================== -->
-
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.min.js"></script>
     <script src="app.js"></script>
-
-
+    <script src="inversig-ui.js"></script>
 </body>
-
 </html>
