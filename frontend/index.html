@@ -14,29 +14,15 @@
 <body>
     <header class="topbar">
         <div class="brand">
-            <div class="brand-mark">⌖</div>
+            <img
+                src="logo-inversig.png"
+                alt="Logo INVERSIG"
+                class="brand-logo"
+            >
             <div>
                 <h1>INVERSIG</h1>
                 <span>Inteligencia territorial</span>
             </div>
-        </div>
-
-        <div class="global-search">
-            <span class="search-icon">⌕</span>
-            <input id="globalSearch"
-                   type="search"
-                   placeholder="Buscar municipio, dirección o coordenadas"
-                   autocomplete="off">
-            <kbd>Enter</kbd>
-            <div id="searchMessage" class="search-message" aria-live="polite"></div>
-        </div>
-
-        <div class="top-status">
-            <div class="data-status">
-                <span class="status-dot"></span>
-                <span>Datos<br>actualizados</span>
-            </div>
-            <div class="avatar">AM</div>
         </div>
     </header>
 
@@ -48,9 +34,6 @@
             <button class="nav-item" data-view="layers">
                 <span>▱</span><small>Capas</small>
             </button>
-            <button class="nav-item" data-view="analysis">
-                <span>⌁</span><small>Análisis</small>
-            </button>
         </nav>
 
         <aside class="workspace-panel">
@@ -61,55 +44,66 @@
                         <span class="eyebrow">OPORTUNIDADES</span>
                         <h2>Explorar terrenos</h2>
                     </div>
-                    <span class="count-pill" id="opportunityCount">—</span>
                 </div>
 
-                <div class="filter-card">
+                <div class="filter-card terrain-search-card">
+                    <div class="source-chip"><span class="source-dot"></span> Fuente externa: VIXORA AI</div>
                     <label>
-                        Tipo de uso
-                        <select id="useFilter">
-                            <option value="">Todos</option>
-                            <option value="residencial">Residencial</option>
-                            <option value="comercial">Comercial</option>
-                            <option value="industrial">Industrial</option>
-                            <option value="agropecuario">Agropecuario</option>
+                        Municipio
+                        <select id="terrainMunicipality">
+                            <option value="">Todos los municipios de prueba</option>
+                            <option value="rionegro">Rionegro</option>
+                            <option value="la-ceja">La Ceja</option>
+                            <option value="el-retiro">El Retiro</option>
+                            <option value="guarne">Guarne</option>
+                            <option value="marinilla">Marinilla</option>
+                            <option value="el-carmen-de-viboral">El Carmen de Viboral</option>
+                            <option value="el-santuario">El Santuario</option>
+                            <option value="san-vicente-ferrer">San Vicente Ferrer</option>
+                            <option value="guatape">Guatapé</option>
+                            <option value="el-penol">El Peñol</option>
+                            <option value="san-rafael">San Rafael</option>
+                            <option value="san-carlos">San Carlos</option>
+                            <option value="sonson">Sonsón</option>
+                            <option value="abejorral">Abejorral</option>
                         </select>
                     </label>
-
+                    <label>
+                        Tipo de inmueble
+                        <select id="terrainType">
+                            <option value="ambos">Lotes y fincas</option>
+                            <option value="lote">Lotes</option>
+                            <option value="finca">Fincas</option>
+                        </select>
+                    </label>
                     <div class="filter-row">
                         <label>
-                            Área mínima
-                            <input id="minArea" type="number" min="0" placeholder="Ej. 5000">
+                            Área mínima (m²)
+                            <input id="minArea" type="number" min="0" placeholder="Ej. 1000">
                         </label>
                         <label>
-                            Presupuesto máximo
-                            <input id="maxBudget" type="number" min="0" placeholder="$">
+                            Precio máximo (COP)
+                            <input id="maxBudget" type="number" min="0" placeholder="Ej. 500000000">
                         </label>
                     </div>
-
                     <button id="applyFilters" class="primary-button" type="button">
-                        ✦ Aplicar filtros
+                        <span aria-hidden="true">⌕</span> Buscar terrenos publicados
                     </button>
-
-                    <p class="data-note">
-                        Los resultados de terrenos se conectarán únicamente a datos reales y verificables.
-                    </p>
+                    <p class="data-note">Consulta anuncios publicados en VIXORA. Los precios son valores de oferta, no avalúos comerciales.</p>
                 </div>
 
-                <div class="section-heading">
+                <div class="section-heading terrain-results-heading">
                     <div>
-                        <h3>Mejores oportunidades</h3>
-                        <span id="opportunityStatus">Sin fuente de terrenos conectada todavía</span>
+                        <h3>Terrenos publicados</h3>
+                        <span id="opportunityStatus" aria-live="polite">Listo para consultar VIXORA</span>
                     </div>
                 </div>
-
-                <div id="opportunityList" class="empty-state">
-                    <div class="empty-icon">⌖</div>
-                    <strong>Sin oportunidades cargadas</strong>
-                    <p>
-                        Esta sección queda preparada para recibir terrenos reales
-                        desde la base de datos.
-                    </p>
+                <div id="opportunityList" class="opportunity-list">
+                    <div class="empty-state">
+                        <div class="empty-icon">⌖</div>
+                        <strong>Consulta la oferta disponible</strong>
+                        <p>Selecciona un municipio o consulta los tres municipios de prueba.</p>
+                    </div>
                 </div>
 
                 <div class="sig-tools-card">
@@ -142,7 +136,7 @@
 
                 <input type="file"
                        id="layerInput"
-                       accept=".geojson,.json,.kml,.zip"
+                       accept=".geojson,.json,.kml,.kmz,.zip,.shp"
                        hidden>
 
                 <section class="layers" id="layersContainer">
@@ -249,8 +243,23 @@
 
         <section class="map-container">
             <div class="map-tools">
-                <button class="map-tool active" title="Mapa">⌖</button>
-                <button class="map-tool" title="Capturar coordenadas" id="mapCaptureButton">⌖</button>
+                <button class="map-tool active"
+                        title="Explorar y seleccionar"
+                        aria-label="Explorar y seleccionar"
+                        id="mapExploreButton">⌖</button>
+
+                <button class="map-tool"
+                        title="Capturar coordenadas"
+                        aria-label="Capturar coordenadas"
+                        id="mapCaptureButton">
+                    <svg width="23" height="23" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.8"
+                         stroke-linecap="round" stroke-linejoin="round"
+                         aria-hidden="true">
+                        <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/>
+                        <circle cx="12" cy="10" r="2.5"/>
+                    </svg>
+                </button>
             </div>
 
             <div id="map"></div>
@@ -262,6 +271,41 @@
             </div>
         </section>
     </main>
+
+    <div id="municipalityDialog" class="municipality-dialog" hidden>
+        <button class="municipality-dialog-backdrop"
+                type="button"
+                data-close-municipality
+                aria-label="Cerrar ficha municipal"></button>
+        <section class="municipality-dialog-panel"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="municipalityDialogTitle">
+            <header class="municipality-dialog-header">
+                <div>
+                    <span class="eyebrow" id="municipalityDialogSubtitle">FICHA MUNICIPAL</span>
+                    <h2 id="municipalityDialogTitle">Municipio</h2>
+                    <p id="municipalityDialogCode"></p>
+                </div>
+                <button class="municipality-dialog-close"
+                        type="button"
+                        data-close-municipality
+                        aria-label="Cerrar ficha">×</button>
+            </header>
+            <nav class="municipality-tabs" role="tablist" aria-label="Secciones de la ficha municipal">
+                <button type="button" role="tab" aria-selected="true" data-municipality-tab="informacion">Información</button>
+                <button type="button" role="tab" aria-selected="false" data-municipality-tab="normativa">Normativa</button>
+                <button type="button" role="tab" aria-selected="false" data-municipality-tab="indicadores">Indicadores</button>
+                <button type="button" role="tab" aria-selected="false" data-municipality-tab="vias">Vías</button>
+                <button type="button" role="tab" aria-selected="false" data-municipality-tab="analisis">Análisis</button>
+            </nav>
+            <div id="municipalityDialogContent"
+                 class="municipality-dialog-content"
+                 role="tabpanel"
+                 tabindex="0"
+                 aria-live="polite"></div>
+        </section>
+    </div>
 
     <!-- Mantener los botones que app.js utiliza para captura -->
     <div class="legacy-tools" aria-hidden="true">
@@ -314,7 +358,11 @@
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.min.js"></script>
+    <script src="https://unpkg.com/esri-leaflet@3.0.19/dist/esri-leaflet.js"></script>
+    <!-- Lectores de formatos geográficos usados por la carga de capas -->
+    <script src="https://cdn.jsdelivr.net/npm/@tmcw/togeojson@5.8.1/dist/togeojson.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/shpjs@6.1.0/dist/shp.min.js"></script>
     <script src="app.js"></script>
     <script src="inversig-ui.js"></script>
 </body>

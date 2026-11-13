@@ -10,6 +10,161 @@ const map = L.map("map").setView(
     [4.5709, -74.2973],
     6
 );
+window.map = map;
+
+function mostrarNotificacion(
+    tipo,
+    titulo,
+    mensaje,
+    detalle,
+    accion = null
+) {
+    const estilos = {
+        success: { borde: "#10b981", fondo: "#ecfdf5", texto: "#065f46", icono: "✓" },
+        error:   { borde: "#ef4444", fondo: "#fef2f2", texto: "#991b1b", icono: "!" },
+        warning: { borde: "#f59e0b", fondo: "#fffbeb", texto: "#92400e", icono: "⚠" },
+        info:    { borde: "#3b82f6", fondo: "#eff6ff", texto: "#1e40af", icono: "i" }
+    };
+    const estilo = estilos[tipo] || estilos.info;
+
+    let contenedor = document.getElementById("inversig-toast-container");
+    if (!contenedor) {
+        contenedor = document.createElement("div");
+        contenedor.id = "inversig-toast-container";
+        Object.assign(contenedor.style, {
+            position: "fixed",
+            top: "18px",
+            right: "18px",
+            zIndex: "200000",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            width: "min(410px, calc(100vw - 36px))",
+            pointerEvents: "none"
+        });
+        document.body.appendChild(contenedor);
+    }
+
+    const notificacion = document.createElement("section");
+    notificacion.setAttribute("role", tipo === "error" ? "alert" : "status");
+    notificacion.setAttribute("aria-live", tipo === "error" ? "assertive" : "polite");
+    Object.assign(notificacion.style, {
+        boxSizing: "border-box",
+        width: "100%",
+        display: "grid",
+        gridTemplateColumns: "30px minmax(0, 1fr) 24px",
+        columnGap: "10px",
+        alignItems: "start",
+        padding: "14px",
+        background: estilo.fondo,
+        color: estilo.texto,
+        borderLeft: `5px solid ${estilo.borde}`,
+        borderRadius: "12px",
+        boxShadow: "0 10px 30px rgba(15, 23, 42, .2)",
+        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+        fontSize: "13px",
+        lineHeight: "1.45",
+        opacity: "0",
+        transform: "translateY(-8px)",
+        transition: "opacity .2s ease, transform .2s ease",
+        pointerEvents: "auto"
+    });
+
+    const icono = document.createElement("span");
+    icono.textContent = estilo.icono;
+    Object.assign(icono.style, {
+        width: "28px",
+        height: "28px",
+        borderRadius: "50%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: estilo.borde,
+        color: "#fff",
+        fontWeight: "800",
+        fontSize: "16px"
+    });
+
+    const contenido = document.createElement("div");
+    contenido.style.minWidth = "0";
+
+    const encabezado = document.createElement("strong");
+    encabezado.textContent = titulo;
+    Object.assign(encabezado.style, {
+        display: "block",
+        fontSize: "14px",
+        marginBottom: "4px"
+    });
+    contenido.appendChild(encabezado);
+
+    const mensajeElemento = document.createElement("div");
+    mensajeElemento.textContent = mensaje || "";
+    contenido.appendChild(mensajeElemento);
+
+    if (accion && typeof accion.onClick === "function") {
+        const botonAccion = document.createElement("button");
+        botonAccion.type = "button";
+        botonAccion.textContent = accion.label || "Deshacer";
+        Object.assign(botonAccion.style, {
+            marginTop: "9px",
+            padding: "6px 12px",
+            border: `1px solid ${estilo.borde}`,
+            borderRadius: "7px",
+            background: "#ffffff",
+            color: estilo.texto,
+            fontWeight: "700",
+            cursor: "pointer"
+        });
+        botonAccion.addEventListener("click", () => {
+            accion.onClick();
+            quitar();
+        });
+        contenido.appendChild(botonAccion);
+    }
+
+    if (detalle) {
+        const detalleElemento = document.createElement("div");
+        detalleElemento.textContent = detalle;
+        Object.assign(detalleElemento.style, {
+            marginTop: "5px",
+            opacity: ".9",
+            overflowWrap: "anywhere"
+        });
+        contenido.appendChild(detalleElemento);
+    }
+
+    const cerrar = document.createElement("button");
+    cerrar.type = "button";
+    cerrar.textContent = "×";
+    cerrar.setAttribute("aria-label", "Cerrar notificación");
+    Object.assign(cerrar.style, {
+        border: "0",
+        background: "transparent",
+        color: estilo.texto,
+        cursor: "pointer",
+        fontSize: "22px",
+        lineHeight: "20px",
+        padding: "0"
+    });
+
+    const quitar = () => {
+        notificacion.style.opacity = "0";
+        notificacion.style.transform = "translateY(-8px)";
+        window.setTimeout(() => notificacion.remove(), 220);
+    };
+    cerrar.addEventListener("click", quitar);
+
+    notificacion.append(icono, contenido, cerrar);
+    contenedor.appendChild(notificacion);
+
+    requestAnimationFrame(() => {
+        notificacion.style.opacity = "1";
+        notificacion.style.transform = "translateY(0)";
+    });
+
+    const duracion = tipo === "error" ? 8500 : 6500;
+    window.setTimeout(quitar, duracion);
+}
 
 L.tileLayer(
     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -57,6 +212,260 @@ map.on(
     }
 );
 
+
+// ============================================================
+// MINIMIZAR PANEL DE EXPLORACIÓN
+// ============================================================
+
+(function inicializarMinimizacionExplorar() {
+    const panel = document.getElementById("view-explore");
+    if (!panel) return;
+
+    const encabezado = panel.querySelector(".panel-heading");
+    const appShell = document.querySelector(".app-shell");
+    const mapContainer = document.querySelector(".map-container");
+    if (!encabezado || !appShell || !mapContainer) return;
+
+    let boton = encabezado.querySelector(".explore-minimize-button");
+    if (!boton) {
+        boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "explore-minimize-button";
+        boton.textContent = "−";
+        boton.title = "Minimizar panel";
+        boton.setAttribute("aria-label", "Minimizar panel de exploración");
+        encabezado.appendChild(boton);
+    }
+
+    let minimizado = false;
+    boton.setAttribute("aria-expanded", "true");
+    boton.setAttribute("aria-controls", panel.id);
+
+    function actualizarEstadoMinimizacion() {
+        appShell.classList.toggle("explore-panel-collapsed", minimizado);
+
+        if (minimizado) {
+            mapContainer.appendChild(boton);
+            boton.classList.add("is-collapsed");
+        } else {
+            encabezado.appendChild(boton);
+            boton.classList.remove("is-collapsed");
+        }
+
+        boton.textContent = minimizado ? "+" : "−";
+        boton.title = minimizado ? "Expandir panel" : "Minimizar panel";
+        boton.setAttribute(
+            "aria-label",
+            minimizado ? "Expandir panel de exploración" : "Minimizar panel de exploración"
+        );
+        boton.setAttribute("aria-expanded", String(!minimizado));
+
+        if (window.map && typeof window.map.invalidateSize === "function") {
+            window.setTimeout(() => window.map.invalidateSize(), 80);
+        }
+    }
+
+    boton.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        minimizado = !minimizado;
+        actualizarEstadoMinimizacion();
+    });
+
+    document.querySelectorAll(".nav-item, [data-view-target]").forEach((control) => {
+        control.addEventListener("click", function () {
+            const vista = control.dataset.view || control.dataset.viewTarget;
+            if (vista !== "explore" && minimizado) {
+                minimizado = false;
+                actualizarEstadoMinimizacion();
+            }
+        });
+    });
+})();
+
+// ============================================================
+// EXPLORAR TERRENOS: CONECTOR VIXORA AI
+// ============================================================
+
+let vixoraMarkersLayer = null;
+let vixoraMunicipalityLayer = null;
+let vixoraLastResults = [];
+
+const CODIGOS_MUNICIPIOS_VIXORA = {
+    "rionegro": "05615",
+    "la-ceja": "05376",
+    "el-retiro": "05607",
+    "guarne": "05318",
+    "marinilla": "05440",
+    "el-carmen-de-viboral": "05148",
+    "el-santuario": "05697",
+    "san-vicente-ferrer": "05674",
+    "guatape": "05321",
+    "el-penol": "05541",
+    "san-rafael": "05667",
+    "san-carlos": "05649",
+    "sonson": "05756",
+    "abejorral": "05002"
+};
+
+async function resaltarMunicipioVixora(municipioSlug) {
+    if (!window.map || !municipioSlug) return;
+    if (vixoraMunicipalityLayer) {
+        window.map.removeLayer(vixoraMunicipalityLayer);
+        vixoraMunicipalityLayer = null;
+    }
+
+    const codigo = CODIGOS_MUNICIPIOS_VIXORA[municipioSlug];
+    if (!codigo) return;
+
+    const response = await fetch(`http://127.0.0.1:8000/municipios/${codigo}/geometria`);
+    if (!response.ok) throw new Error("No fue posible cargar el límite geográfico del municipio.");
+    const geojson = await response.json();
+
+    vixoraMunicipalityLayer = L.geoJSON(geojson, {
+        style: {
+            color: "#dc2626",
+            weight: 3,
+            opacity: 1,
+            fillColor: "#ef4444",
+            fillOpacity: 0.24
+        },
+        interactive: true
+    }).addTo(window.map);
+
+    const bounds = vixoraMunicipalityLayer.getBounds();
+    if (bounds.isValid()) window.map.fitBounds(bounds.pad(0.12), { maxZoom: 12 });
+}
+
+function formatoCOP(valor) {
+    const numero = Number(valor);
+    if (!Number.isFinite(numero)) return "Precio no informado";
+    return numero.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+}
+
+function obtenerDatoAnuncio(anuncio, ruta) {
+    return ruta.split(".").reduce((valor, clave) => valor && valor[clave] !== undefined ? valor[clave] : null, anuncio);
+}
+
+function obtenerCoordenadasAnuncio(anuncio) {
+    const candidatos = [
+        [obtenerDatoAnuncio(anuncio, "location.latitude"), obtenerDatoAnuncio(anuncio, "location.longitude")],
+        [obtenerDatoAnuncio(anuncio, "location.lat"), obtenerDatoAnuncio(anuncio, "location.lng")],
+        [anuncio.latitude, anuncio.longitude],
+        [anuncio.lat, anuncio.lng],
+        [anuncio.latitud, anuncio.longitud],
+        [obtenerDatoAnuncio(anuncio, "coordinates.latitude"), obtenerDatoAnuncio(anuncio, "coordinates.longitude")],
+        [obtenerDatoAnuncio(anuncio, "geo.latitude"), obtenerDatoAnuncio(anuncio, "geo.longitude")]
+    ];
+    for (const [lat, lng] of candidatos) {
+        const y = Number(lat), x = Number(lng);
+        // INVERSIG está probando el Oriente Antioqueño: descarta coordenadas fuera de Antioquia.
+        if (Number.isFinite(y) && Number.isFinite(x) && y >= 5.3 && y <= 8.9 && x >= -77.3 && x <= -73.7) return [y, x];
+    }
+    return null;
+}
+
+function renderizarAnunciosVixora(anuncios) {
+    const contenedor = document.getElementById("opportunityList");
+    if (!contenedor) return;
+    contenedor.replaceChildren();
+
+    if (vixoraMarkersLayer && window.map) window.map.removeLayer(vixoraMarkersLayer);
+    vixoraMarkersLayer = L.featureGroup();
+
+    if (!anuncios.length) {
+        contenedor.innerHTML = '<div class="empty-state"><div class="empty-icon">⌕</div><strong>No se encontraron publicaciones</strong><p>Prueba con otro municipio o ajusta el área y el precio máximo.</p></div>';
+        return;
+    }
+
+    anuncios.forEach((anuncio) => {
+        const codigo = anuncio.code || "Sin código";
+        const titulo = anuncio.title || `${anuncio.type || "Terreno"} en venta`;
+        const municipio = obtenerDatoAnuncio(anuncio, "location.municipality") || "Municipio no informado";
+        const vereda = obtenerDatoAnuncio(anuncio, "location.vereda");
+        const area = obtenerDatoAnuncio(anuncio, "areas.lot_m2") ?? anuncio.area_m2 ?? anuncio.area;
+        const precio = obtenerDatoAnuncio(anuncio, "price.amount") ?? anuncio.price;
+        const url = anuncio.url || anuncio.canonical_url || "https://vixoraai.com";
+        const fotoRaw = (Array.isArray(anuncio.photos) && anuncio.photos[0]) || anuncio.image || anuncio.cover_image || "";
+        const foto = typeof fotoRaw === "string" ? fotoRaw : (fotoRaw?.url || fotoRaw?.src || "");
+        const ubicacionAprox = obtenerDatoAnuncio(anuncio, "location.approximate");
+
+        const card = document.createElement("article");
+        card.className = "opportunity-card";
+        const fotoHtml = foto ? `<img class="opportunity-photo" src="${escaparHtmlMunicipio(foto)}" alt="Fotografía de ${escaparHtmlMunicipio(titulo)}" loading="lazy">` : '<div class="opportunity-photo opportunity-photo-placeholder">⌂</div>';
+        card.innerHTML = `${fotoHtml}<div class="opportunity-card-body">
+            <div class="opportunity-card-top"><span class="opportunity-code">${escaparHtmlMunicipio(codigo)}</span><span class="opportunity-type">${escaparHtmlMunicipio(anuncio.type || "terreno")}</span></div>
+            <h4>${escaparHtmlMunicipio(titulo)}</h4>
+            <p class="opportunity-location">⌖ ${escaparHtmlMunicipio(municipio)}${vereda ? ` · ${escaparHtmlMunicipio(vereda)}` : ""}${ubicacionAprox ? " · Ubicación aproximada" : ""}</p>
+            <div class="opportunity-facts"><span><small>Área de lote</small><strong>${area !== null && area !== undefined ? `${Number(area).toLocaleString("es-CO")} m²` : "No informada"}</strong></span><span><small>Precio publicado</small><strong>${formatoCOP(precio)}</strong></span></div>
+            <a class="opportunity-link" href="${escaparHtmlMunicipio(url)}" target="_blank" rel="noopener noreferrer">Ver publicación original ↗</a>
+        </div>`;
+        contenedor.appendChild(card);
+
+        const coords = obtenerCoordenadasAnuncio(anuncio);
+        if (coords) {
+            const marker = L.marker(coords).bindPopup(`<strong>${escaparHtmlMunicipio(titulo)}</strong><br>${escaparHtmlMunicipio(municipio)}<br>${formatoCOP(precio)}<br><a href="${escaparHtmlMunicipio(url)}" target="_blank" rel="noopener noreferrer">Ver publicación</a>`);
+            vixoraMarkersLayer.addLayer(marker);
+        }
+    });
+
+    if (window.map && vixoraMarkersLayer.getLayers().length) {
+        vixoraMarkersLayer.addTo(window.map);
+    }
+}
+
+async function buscarTerrenosVixora() {
+    const boton = document.getElementById("applyFilters");
+    const estado = document.getElementById("opportunityStatus");
+    const municipio = document.getElementById("terrainMunicipality")?.value || "";
+    const tipo = document.getElementById("terrainType")?.value || "ambos";
+    const areaMin = document.getElementById("minArea")?.value || "";
+    const precioMax = document.getElementById("maxBudget")?.value || "";
+    const params = new URLSearchParams({ tipo, page: "1", page_size: "50" });
+    if (municipio) params.set("municipio", municipio);
+    if (areaMin) params.set("area_min", areaMin);
+    if (precioMax) params.set("precio_max", precioMax);
+
+    if (boton) { boton.disabled = true; boton.textContent = "Consultando VIXORA…"; }
+    if (estado) estado.textContent = "Consultando publicaciones disponibles…";
+    const contenedor = document.getElementById("opportunityList");
+    if (contenedor) contenedor.innerHTML = '<div class="empty-state"><strong>Buscando terrenos…</strong><p>Conectando con la fuente inmobiliaria.</p></div>';
+
+    try {
+        if (municipio) {
+            try {
+                await resaltarMunicipioVixora(municipio);
+            } catch (mapError) {
+                console.warn("No se pudo resaltar el municipio seleccionado:", mapError);
+            }
+        } else if (vixoraMunicipalityLayer && window.map) {
+            window.map.removeLayer(vixoraMunicipalityLayer);
+            vixoraMunicipalityLayer = null;
+        }
+
+        const response = await fetch(`http://127.0.0.1:8000/fuentes/vixora/propiedades?${params.toString()}`);
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.detail || `Error HTTP ${response.status}`);
+        vixoraLastResults = Array.isArray(payload.data) ? payload.data : [];
+        renderizarAnunciosVixora(vixoraLastResults);
+        const cantidad = vixoraLastResults.length;
+        if (estado) estado.textContent = `${cantidad} publicación${cantidad === 1 ? "" : "es"} recibida${cantidad === 1 ? "" : "s"} desde VIXORA`;
+        if (typeof mostrarNotificacion === "function") {
+            mostrarNotificacion("success", "Consulta completada", `${cantidad} publicaciones recibidas desde VIXORA AI.`, "Los datos se consultaron en línea y no se guardaron en INVERSIG.");
+        }
+    } catch (error) {
+        console.error("Error consultando VIXORA:", error);
+        if (estado) estado.textContent = "No fue posible consultar la fuente";
+        if (contenedor) contenedor.innerHTML = `<div class="empty-state"><strong>Error de conexión con VIXORA</strong><p>${escaparHtmlMunicipio(error.message)}. Verifica que el backend de INVERSIG esté activo y tenga conexión a internet.</p></div>`;
+        if (typeof mostrarNotificacion === "function") mostrarNotificacion("error", "No se pudo consultar VIXORA", error.message, "Comprueba que FastAPI esté activo en el puerto 8000.");
+    } finally {
+        if (boton) { boton.disabled = false; boton.innerHTML = '<span aria-hidden="true">⌕</span> Buscar terrenos publicados'; }
+    }
+}
+
+const buscarTerrenosButton = document.getElementById("applyFilters");
+if (buscarTerrenosButton) buscarTerrenosButton.addEventListener("click", buscarTerrenosVixora);
 
 // ============================================================
 // CONTENEDOR DEL PANEL
@@ -405,6 +814,124 @@ function agregarBotonReproyeccion(
 // CONFIGURAR TARJETA DE CAPA
 // ============================================================
 
+function actualizarContadorCapas() {
+    const contador = document.getElementById("layer-count");
+    if (contador && layersContainer) {
+        contador.textContent = String(
+            layersContainer.querySelectorAll(".layer-card").length
+        );
+    }
+}
+
+function agregarBotonEliminarCapa(layerCard) {
+    if (!layerCard) return;
+
+    let boton = layerCard.querySelector(".delete-layer-button");
+    if (!boton) {
+        boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "delete-layer-button";
+        boton.textContent = "×";
+        boton.title = "Eliminar capa del mapa";
+        boton.setAttribute("aria-label", "Eliminar capa del mapa");
+
+        const titulo = layerCard.querySelector(".layer-title");
+        if (titulo) {
+            titulo.appendChild(boton);
+        } else {
+            layerCard.appendChild(boton);
+        }
+    }
+
+    boton.onclick = function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const nombre = layerCard.dataset.layerName ||
+            layerCard.querySelector(".layer-title strong")?.textContent?.trim() ||
+            "la capa";
+
+        // Guardar la ubicación de la tarjeta y el estado de visibilidad
+        // de todas sus capas Leaflet para permitir deshacer sin recargar.
+        const contenedorOriginal = layerCard.parentNode;
+        const siguienteElemento = layerCard.nextSibling;
+        const capas = [
+            layerCard.leafletLayer,
+            ...(Array.isArray(layerCard.auxiliaryLeafletLayers)
+                ? layerCard.auxiliaryLeafletLayers
+                : [])
+        ].filter(Boolean);
+
+        const estadoCapas = capas.map((capa) => ({
+            capa,
+            visible: map.hasLayer(capa)
+        }));
+
+        eliminarCapasDeTarjeta(layerCard);
+        layerCard.remove();
+        actualizarContadorCapas();
+
+        mostrarNotificacion(
+            "success",
+            "Capa eliminada",
+            `Se eliminó ${nombre} del mapa y del panel.`,
+            null,
+            {
+                label: "Cancelar",
+                onClick: function () {
+                    // Reinsertar la misma tarjeta en su posición original.
+                    if (contenedorOriginal) {
+                        const referencia = (
+                            siguienteElemento &&
+                            siguienteElemento.parentNode === contenedorOriginal
+                        ) ? siguienteElemento : null;
+
+                        contenedorOriginal.insertBefore(layerCard, referencia);
+                    }
+
+                    // Recuperar exactamente las capas que estaban visibles.
+                    estadoCapas.forEach(({ capa, visible }) => {
+                        if (visible && !map.hasLayer(capa)) {
+                            map.addLayer(capa);
+                        } else if (!visible && map.hasLayer(capa)) {
+                            map.removeLayer(capa);
+                        }
+                    });
+
+                    const botonVisibilidad = layerCard.querySelector(".visibility");
+                    const capaPrincipal = layerCard.leafletLayer;
+                    const estabaVisible = capaPrincipal
+                        ? map.hasLayer(capaPrincipal)
+                        : false;
+
+                    if (botonVisibilidad) {
+                        botonVisibilidad.textContent = estabaVisible ? "●" : "○";
+                        botonVisibilidad.classList.toggle("active", estabaVisible);
+                    }
+
+                    layerCard.classList.toggle("disabled", !estabaVisible);
+                    actualizarContadorCapas();
+                }
+            }
+        );
+    };
+}
+
+function eliminarCapasDeTarjeta(layerCard) {
+    const capas = [
+        layerCard.leafletLayer,
+        ...(Array.isArray(layerCard.auxiliaryLeafletLayers)
+            ? layerCard.auxiliaryLeafletLayers
+            : [])
+    ];
+
+    capas.forEach((capa) => {
+        if (capa && map.hasLayer(capa)) {
+            map.removeLayer(capa);
+        }
+    });
+}
+
 function configurarTarjeta(
     layerCard,
     nombre,
@@ -499,6 +1026,56 @@ function configurarTarjeta(
     agregarBotonReproyeccion(
         layerCard
     );
+
+    agregarBotonEliminarCapa(layerCard);
+    actualizarContadorCapas();
+}
+
+function agregarBotonDescargaReproyeccion(layerCard) {
+    let boton = layerCard.querySelector(".download-reprojected-button");
+
+    if (!boton) {
+        boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "download-reprojected-button";
+        boton.textContent = "Descargar GeoJSON reproyectado";
+        layerCard.appendChild(boton);
+    }
+
+    boton.onclick = function () {
+        const geojson = layerCard.geojson;
+        if (!geojson) {
+            mostrarNotificacion(
+                "error",
+                "No se pudo descargar la capa",
+                "No hay un resultado de reproyección disponible."
+            );
+            return;
+        }
+
+        const nombre = layerCard.dataset.layerName || "capa";
+        const archivo = `${nombre}`
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-zA-Z0-9_-]+/g, "_")
+            .replace(/^_+|_+$/g, "") || "capa";
+        const url = URL.createObjectURL(
+            new Blob(
+                [JSON.stringify(geojson, null, 2)],
+                { type: "application/geo+json" }
+            )
+        );
+        const enlace = document.createElement("a");
+        enlace.href = url;
+        enlace.download = `${archivo}_${layerCard.dataset.layerCrs || "reproyectado"}.geojson`;
+        enlace.click();
+        window.setTimeout(
+            function () {
+                URL.revokeObjectURL(url);
+            },
+            1000
+        );
+    };
 }
 
 
@@ -544,6 +1121,7 @@ function agregarCapaAlPanel(
             titulo.textContent.trim() ===
                 nombre
         ) {
+            eliminarCapasDeTarjeta(tarjetas[i]);
 
             configurarTarjeta(
                 tarjetas[i],
@@ -618,14 +1196,160 @@ function agregarCapaAlPanel(
         crs
     );
 
+    actualizarContadorCapas();
 
     return layerCard;
 }
 
 
 // ============================================================
+// Capa ArcGIS de comunas y corregimientos desactivada por solicitud.
+// Se conserva el resto de las capas y funcionalidades del visor.
+
 // CAPITALes DEPARTAMENTALES
 // ============================================================
+
+function normalizarNombreMunicipio(valor) {
+    return String(valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+}
+
+function obtenerAliasCapital(nombre) {
+    const nombreNormalizado = normalizarNombreMunicipio(nombre);
+    const alias = {
+        bogotadc: "bogota",
+        cartagenadeindias: "cartagena"
+    };
+    return alias[nombreNormalizado] || nombreNormalizado;
+}
+
+const municipiosCatalogoPromise = fetch(
+    "http://127.0.0.1:8000/municipios/catalogo"
+).then(function (response) {
+    if (!response.ok) {
+        throw new Error("No se pudo cargar el catálogo de municipios.");
+    }
+    return response.json();
+});
+
+let municipiosCatalogo = [];
+
+municipiosCatalogoPromise.then(function (municipios) {
+    municipiosCatalogo = municipios;
+}).catch(function (error) {
+    console.error("Error cargando el catálogo de municipios:", error);
+});
+
+function construirPopupCapital(capital, municipios) {
+    const municipioCapital = municipios.find(function (municipio) {
+        return obtenerAliasCapital(municipio.nombre) === obtenerAliasCapital(capital.nombre);
+    });
+
+    const codigoDepartamento = municipioCapital
+        ? String(municipioCapital.codigo).slice(0, 2)
+        : Object.entries(departamentosColombia).find(function ([, nombreDepartamento]) {
+            return normalizarNombreMunicipio(nombreDepartamento)
+                === normalizarNombreMunicipio(capital.departamento);
+        })?.[0];
+
+    const municipiosDepartamento = municipios.filter(function (municipio) {
+        return String(municipio.codigo).slice(0, 2) === codigoDepartamento;
+    });
+
+    const opciones = municipiosDepartamento.map(function (municipio) {
+        return `<option value="${escaparHtmlMunicipio(municipio.codigo)}">${escaparHtmlMunicipio(municipio.nombre)}</option>`;
+    }).join("");
+
+    return `
+        <div class="capital-municipality-picker">
+            <h3>${escaparHtmlMunicipio(capital.nombre || "Capital departamental")}</h3>
+            <p class="capital-picker-help">Selecciona uno o varios municipios para consultar sus fichas.</p>
+            <button type="button" class="capital-municipios-toggle" aria-expanded="false">
+                Elegir municipios <span aria-hidden="true">▾</span>
+            </button>
+            <div class="capital-municipios-menu" hidden>
+                <label>
+                    <span>Municipios del departamento</span>
+                    <select class="capital-municipio-select" multiple size="7" ${municipiosDepartamento.length ? "" : "disabled"} aria-label="Selecciona uno o varios municipios">
+                        ${opciones || '<option value="">No hay municipios asociados</option>'}
+                    </select>
+                </label>
+                <p class="capital-picker-help">En computador usa Ctrl/Cmd para seleccionar varios.</p>
+                <div class="capital-selected-list" aria-live="polite">
+                    <span class="capital-selected-empty">Aún no has seleccionado municipios.</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+document.addEventListener("click", function (event) {
+    const toggle = event.target.closest?.(".capital-municipios-toggle");
+    if (toggle) {
+        const menu = toggle.nextElementSibling;
+        const isExpanded = toggle.getAttribute("aria-expanded") === "true";
+        toggle.setAttribute("aria-expanded", String(!isExpanded));
+        menu.hidden = isExpanded;
+        return;
+    }
+
+    const fichaButton = event.target.closest?.(".capital-selected-municipio");
+    if (fichaButton) {
+        const municipio = municipiosCatalogo.find(function (item) {
+            return String(item.codigo) === fichaButton.dataset.codigo;
+        });
+        if (!municipio) return;
+        map.closePopup();
+        abrirFichaMunicipal({
+            ...municipio,
+            departamento: obtenerDepartamento(municipio.codigo)
+        });
+    }
+});
+
+document.addEventListener("change", function (event) {
+    const select = event.target.closest?.(".capital-municipio-select");
+    if (!select) return;
+
+    const popup = select.closest(".capital-municipality-picker");
+    const list = popup?.querySelector(".capital-selected-list");
+    if (!list) return;
+
+    list.replaceChildren();
+    const selectedCodes = Array.from(select.selectedOptions).map(function (option) {
+        return option.value;
+    }).filter(Boolean);
+
+    if (!selectedCodes.length) {
+        const empty = document.createElement("span");
+        empty.className = "capital-selected-empty";
+        empty.textContent = "Aún no has seleccionado municipios.";
+        list.append(empty);
+        return;
+    }
+
+    const heading = document.createElement("strong");
+    heading.className = "capital-selected-count";
+    heading.textContent = `Seleccionados: ${selectedCodes.length}`;
+    list.append(heading);
+
+    selectedCodes.forEach(function (codigo) {
+        const municipio = municipiosCatalogo.find(function (item) {
+            return String(item.codigo) === codigo;
+        });
+        if (!municipio) return;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "capital-selected-municipio";
+        button.dataset.codigo = String(municipio.codigo);
+        button.textContent = `Abrir ficha: ${municipio.nombre}`;
+        list.append(button);
+    });
+});
 
 fetch(
     "http://127.0.0.1:8000/capitales-departamentales"
@@ -654,20 +1378,32 @@ fetch(
             );
 
 
-            const capitalesLayer =
-                crearCapaGeoJSON(
-                    data,
-                    {
-                        color:
-                            "#e58b2a",
-
-                        weight:
-                            2,
-
-                        fillOpacity:
-                            0.25
-                    }
-                );
+            const capitalesLayer = L.geoJSON(data, {
+                pointToLayer: function (feature, latlng) {
+                    return L.circleMarker(latlng, {
+                        radius: 7,
+                        color: "#ffffff",
+                        weight: 2,
+                        fillColor: "#d45b36",
+                        fillOpacity: 1
+                    });
+                },
+                onEachFeature: function (feature, layer) {
+                    const capital = feature.properties || {};
+                    layer.bindTooltip(capital.nombre || "Capital departamental");
+                    layer.on("click", async function () {
+                        try {
+                            const municipios = await municipiosCatalogoPromise;
+                            L.popup()
+                                .setLatLng(layer.getLatLng())
+                                .setContent(construirPopupCapital(capital, municipios))
+                                .openOn(map);
+                        } catch (error) {
+                            console.error("No se pudo abrir el selector de municipios:", error);
+                        }
+                    });
+                }
+            });
 
 
             capitalesLayer.addTo(
@@ -764,92 +1500,6 @@ fetch(
 
             console.error(
                 "Error cargando capitales:",
-                error
-            );
-        }
-    );
-
-
-// ============================================================
-// CIUDADES
-// ============================================================
-
-fetch(
-    "http://127.0.0.1:8000/ciudades"
-)
-
-    .then(
-        function (response) {
-
-            if (!response.ok) {
-
-                throw new Error(
-                    "No se pudieron cargar las ciudades."
-                );
-            }
-
-            return response.json();
-        }
-    )
-
-    .then(
-        function (data) {
-
-            console.log(
-                "Ciudades cargadas:",
-                data
-            );
-
-
-            const ciudadesLayer =
-                crearCapaGeoJSON(
-                    data,
-                    {
-                        color:
-                            "#e58b2a",
-
-                        weight:
-                            2,
-
-                        fillOpacity:
-                            0.30
-                    }
-                );
-
-
-            ciudadesLayer.addTo(
-                map
-            );
-
-
-            const cantidadCiudades =
-                data.features
-                    ? data.features.length
-                    : 0;
-
-
-            agregarCapaAlPanel(
-                "Ciudades",
-                ciudadesLayer,
-                cantidadCiudades,
-                "EPSG:4326",
-                data
-            );
-
-
-            console.log(
-                `✓ Ciudades cargadas: ${
-                    cantidadCiudades
-                }`
-            );
-        }
-    )
-
-    .catch(
-        function (error) {
-
-            console.error(
-                "Error cargando ciudades:",
                 error
             );
         }
@@ -1172,8 +1822,10 @@ function abrirVentanaReproyeccion(
 
                 if (!destino) {
 
-                    alert(
-                        "Seleccione un CRS de destino."
+                    mostrarNotificacion(
+                        "warning",
+                        "Selecciona un sistema de referencia",
+                        "Debes elegir un EPSG de destino antes de continuar."
                     );
 
                     return;
@@ -1185,8 +1837,10 @@ function abrirVentanaReproyeccion(
                     crsActual
                 ) {
 
-                    alert(
-                        "El CRS de destino debe ser diferente al CRS actual."
+                    mostrarNotificacion(
+                        "warning",
+                        "El sistema de referencia no cambió",
+                        `Seleccionaste ${destino}, que ya es el CRS actual de la capa.`
                     );
 
                     return;
@@ -1199,8 +1853,10 @@ function abrirVentanaReproyeccion(
 
                 if (!geojson) {
 
-                    alert(
-                        "No se encontró el GeoJSON."
+                    mostrarNotificacion(
+                        "error",
+                        "No se encontró la geometría",
+                        "No hay GeoJSON disponible para reproyectar esta capa."
                     );
 
                     return;
@@ -1256,14 +1912,25 @@ function abrirVentanaReproyeccion(
 
 
                     const resultado =
-                        await response.json();
+                        await response.json().catch(
+                            function () {
+                                return null;
+                            }
+                        );
 
 
                     if (!response.ok) {
 
                         throw new Error(
-                            resultado.detail ||
-                            "Error en el backend."
+                            resultado &&
+                                resultado.detail ||
+                            `El backend respondió con estado ${response.status}.`
+                        );
+                    }
+
+                    if (!resultado) {
+                        throw new Error(
+                            "El backend devolvió una respuesta vacía o inválida."
                         );
                     }
 
@@ -1277,13 +1944,21 @@ function abrirVentanaReproyeccion(
 
 
                     if (
-                        !geojsonVisualizacion
+                        !geojsonVisualizacion ||
+                        !Array.isArray(geojsonReproyectado.features)
                     ) {
 
                         throw new Error(
-                            "El backend no devolvió la capa para visualización."
+                            "El backend no devolvió la capa reproyectada en un formato válido."
                         );
                     }
+
+                    const crsDestino =
+                        resultado.target_crs ||
+                        destino;
+                    const cantidadProcesada =
+                        resultado.feature_count ??
+                        geojsonReproyectado.features.length;
 
 
                     if (
@@ -1347,7 +2022,7 @@ function abrirVentanaReproyeccion(
                                     true,
 
                                 crs:
-                                    destino,
+                                    crsDestino,
 
                                 sourceCrs:
                                     crsActual
@@ -1355,22 +2030,16 @@ function abrirVentanaReproyeccion(
                         );
 
 
-                    if (
-                        layerCard.leafletLayer &&
-                        map.hasLayer(
-                            layerCard.leafletLayer
-                        )
-                    ) {
-
-                        map.removeLayer(
-                            layerCard.leafletLayer
-                        );
-                    }
-
-
                     nuevaCapa.addTo(
                         map
                     );
+
+                    if (
+                        layerCard.leafletLayer &&
+                        map.hasLayer(layerCard.leafletLayer)
+                    ) {
+                        map.removeLayer(layerCard.leafletLayer);
+                    }
 
 
                     layerCard.leafletLayer =
@@ -1394,12 +2063,37 @@ function abrirVentanaReproyeccion(
                     if (epsg) {
 
                         epsg.textContent =
-                            destino;
+                            crsDestino;
                     }
 
 
                     layerCard.dataset.layerCrs =
-                        destino;
+                        crsDestino;
+
+
+                    let entityCount =
+                        layerCard.querySelector(
+                            ".entity-count"
+                        );
+
+                    if (!entityCount) {
+                        entityCount =
+                            document.createElement("div");
+                        entityCount.className =
+                            "entity-count";
+                        layerCard.appendChild(entityCount);
+                    }
+
+                    entityCount.textContent =
+                        `· ${cantidadProcesada} ${
+                            cantidadProcesada === 1
+                                ? "entidad procesada"
+                                : "entidades procesadas"
+                        }`;
+
+                    agregarBotonDescargaReproyeccion(
+                        layerCard
+                    );
 
 
                     try {
@@ -1436,8 +2130,11 @@ function abrirVentanaReproyeccion(
                     modal.remove();
 
 
-                    alert(
-                        `✓ Reproyección realizada correctamente\n\n${crsActual} → ${destino}\n\nLas coordenadas fueron transformadas mediante Python + PyProj.`
+                    mostrarNotificacion(
+                        "success",
+                        "Capa reproyectada correctamente",
+                        `${nombre} · ${crsActual} → ${crsDestino}`,
+                        `Las coordenadas se transformaron al sistema de referencia de destino. ${cantidadProcesada} entidades procesadas; el resultado está disponible para descarga.`
                     );
 
                 }
@@ -1450,8 +2147,11 @@ function abrirVentanaReproyeccion(
                     );
 
 
-                    alert(
-                        `No fue posible reproyectar la capa.\n\n${error.message}`
+                    mostrarNotificacion(
+                        "error",
+                        "No se pudo reproyectar la capa",
+                        `${nombre} · ${crsActual} → ${destino}`,
+                        `${error.message || "Ocurrió un error inesperado."} Se conserva la capa original.`
                     );
 
                 }
@@ -1659,65 +2359,85 @@ if (
                 }
 
 
-                const nuevaCapa =
-                    crearCapaGeoJSON(
-                        geojson
+                // GeoJSON para Leaflet debe estar en coordenadas geográficas
+                // (EPSG:4326). Si el archivo viene proyectado, lo transformamos
+                // para visualizarlo, pero conservamos el GeoJSON original para
+                // que la tarjeta y las descargas mantengan su CRS real.
+                let geojsonVisualizacion = geojson;
+                const crsNormalizado = String(crs || "EPSG:4326").trim();
+                const matchEpsg = crsNormalizado.match(/(?:EPSG(?::|::|\/)|EPSG::|::)(\d+)$/i);
+                const crsOrigen = matchEpsg ? `EPSG:${matchEpsg[1]}` : crsNormalizado;
+
+                if (crsOrigen.toUpperCase() !== "EPSG:4326" && crsOrigen.toUpperCase() !== "OGC:CRS84") {
+                    mostrarNotificacion(
+                        "info",
+                        "Preparando capa para el mapa",
+                        `${file.name} · ${crsOrigen} → EPSG:4326`,
+                        "Las coordenadas se transformarán para que Leaflet pueda ubicar la capa correctamente.",
+                        5000
                     );
 
+                    const reproyeccionResponse = await fetch(
+                        "http://127.0.0.1:8000/reproject",
+                        {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                source_crs: crsOrigen,
+                                target_crs: "EPSG:4326",
+                                geojson: geojson
+                            })
+                        }
+                    );
+                    const reproyeccionResultado = await reproyeccionResponse.json().catch(() => null);
 
-                nuevaCapa.addTo(
-                    map
-                );
-
-
-                try {
-
-                    const bounds =
-                        nuevaCapa.getBounds();
-
-
-                    if (
-                        bounds.isValid()
-                    ) {
-
-                        map.fitBounds(
-                            bounds,
-                            {
-                                padding:
-                                    [
-                                        30,
-                                        30
-                                    ]
-                            }
+                    if (!reproyeccionResponse.ok) {
+                        throw new Error(
+                            reproyeccionResultado?.detail ||
+                            `No se pudo transformar ${crsOrigen} a EPSG:4326 para mostrar la capa.`
                         );
                     }
-
-                }
-                catch (error) {
-
-                    console.log(
-                        "No fue posible ajustar el zoom."
-                    );
+                    if (!reproyeccionResultado?.display_geojson?.features) {
+                        throw new Error("El backend no devolvió una geometría válida para mostrar en el mapa.");
+                    }
+                    geojsonVisualizacion = reproyeccionResultado.display_geojson;
                 }
 
+                const nuevaCapa = crearCapaGeoJSON(geojsonVisualizacion);
+                nuevaCapa.addTo(map);
 
-                const cantidad =
-                    geojson
-                        .features
-                        .length;
+                let seAjustoVista = false;
+                try {
+                    const bounds = nuevaCapa.getBounds();
+                    if (bounds.isValid()) {
+                        map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
+                        seAjustoVista = true;
+                    }
+                } catch (error) {
+                    console.warn("No fue posible ajustar el zoom a la capa:", error);
+                }
 
-
-                agregarCapaAlPanel(
+                const cantidad = geojson.features.length;
+                const tarjetaNueva = agregarCapaAlPanel(
                     file.name,
                     nuevaCapa,
                     cantidad,
-                    crs,
+                    crsOrigen,
                     geojson
                 );
+                if (tarjetaNueva) {
+                    tarjetaNueva.displayGeojson = geojsonVisualizacion;
+                    tarjetaNueva.leafletLayer = nuevaCapa;
+                }
 
-
-                alert(
-                    `Capa "${file.name}" cargada correctamente.`
+                mostrarNotificacion(
+                    "success",
+                    "Capa cargada correctamente",
+                    `${file.name} · ${crsOrigen}`,
+                    seAjustoVista
+                        ? `${cantidad} entidades cargadas. La vista se ajustó a la extensión de la capa.`
+                        : `${cantidad} entidades cargadas, pero no se encontró una extensión geográfica válida.`,
+                    6500
                 );
 
             }
@@ -2034,7 +2754,7 @@ fetch(
                     "Río Magdalena",
                     rioLayer,
                     data,
-                    "EPSG:9377"
+                    "EPSG:4326"
                 );
 
 
@@ -2069,7 +2789,7 @@ fetch(
                 if (epsg) {
 
                     epsg.textContent =
-                        "EPSG:9377";
+                        "EPSG:4326";
                 }
 
 
@@ -2337,6 +3057,41 @@ if (
     );
 }
 
+/* =========================================================
+   BOTONES VISIBLES DEL MAPA
+   ========================================================= */
+
+const mapExploreButton =
+    document.getElementById("mapExploreButton");
+
+const mapCaptureButton =
+    document.getElementById("mapCaptureButton");
+
+if (mapExploreButton && botonDesplazar) {
+    mapExploreButton.addEventListener("click", function () {
+        botonDesplazar.click();
+
+        mapExploreButton.classList.add("active");
+        mapCaptureButton?.classList.remove("active");
+    });
+}
+
+if (mapCaptureButton && botonCapturarCoordenadas) {
+    mapCaptureButton.addEventListener("click", function () {
+        botonCapturarCoordenadas.click();
+
+        mapCaptureButton.classList.toggle(
+            "active",
+            modoCapturaCoordenadas
+        );
+
+        mapExploreButton?.classList.toggle(
+            "active",
+            !modoCapturaCoordenadas
+        );
+    });
+}
+
 
 // ============================================================
 // CLICK PARA CAPTURAR COORDENADA
@@ -2512,19 +3267,6 @@ map.on(
                             destino
                                 .trim()
                                 .toUpperCase();
-
-
-                        if (
-                            crsDestino ===
-                            "EPSG:4326"
-                        ) {
-
-                            alert(
-                                "El CRS de destino debe ser diferente de EPSG:4326."
-                            );
-
-                            return;
-                        }
 
 
                         try {
@@ -3350,6 +4092,581 @@ function obtenerDepartamento(
 // MUNICIPIOS DESDE SUPABASE / POSTGIS
 // ============================================================
 
+function escaparHtmlMunicipio(valor) {
+    return String(valor ?? "").replace(/[&<>"']/g, function (caracter) {
+        return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        }[caracter];
+    });
+}
+
+const municipalityDialog = document.getElementById("municipalityDialog");
+const municipalityDialogTitle = document.getElementById("municipalityDialogTitle");
+const municipalityDialogCode = document.getElementById("municipalityDialogCode");
+const municipalityDialogContent = document.getElementById("municipalityDialogContent");
+let municipalityData = {
+    loading: { profile: false, normativa: false, igac: false },
+    errors: {}
+};
+let municipalityRequestId = 0;
+let activeMunicipality = null;
+let municipalityControllers = [];
+
+function municipalityNode(tag, className, text) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    if (text !== undefined) element.textContent = text;
+    return element;
+}
+
+function municipalityNotice(container, message, isError = false) {
+    const notice = municipalityNode(
+        "p",
+        isError ? "municipality-notice error" : "municipality-notice",
+        message
+    );
+    container.append(notice);
+}
+
+function municipalitySection(container, title) {
+    const section = municipalityNode("section", "municipality-detail-section");
+    section.append(municipalityNode("h3", "", title));
+    container.append(section);
+    return section;
+}
+
+function municipalityField(container, label, value) {
+    const row = municipalityNode("div", "municipality-detail-row");
+    row.append(
+        municipalityNode("span", "", label),
+        municipalityNode(
+            "strong",
+            "",
+            value === null || value === undefined || value === ""
+                ? "No disponible"
+                : String(value)
+        )
+    );
+    container.append(row);
+}
+
+function municipalityMetric(container, label, value, source) {
+    const metric = municipalityNode("article", "municipality-metric");
+    metric.append(
+        municipalityNode("span", "", label),
+        municipalityNode("strong", "", value),
+        municipalityNode("small", "", source)
+    );
+    container.append(metric);
+}
+
+function municipalityNumber(value) {
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+}
+
+function municipalityFormatNumber(value, maximumFractionDigits = 0) {
+    return value.toLocaleString("es-CO", { maximumFractionDigits });
+}
+
+function municipalityDocument(container, title, details, url) {
+    const card = municipalityNode("article", "municipality-document");
+    card.append(municipalityNode("h4", "", title || "Instrumento sin título"));
+    details.filter(Boolean).forEach(function (detail) {
+        card.append(municipalityNode("p", "", detail));
+    });
+
+    if (url) {
+        try {
+            const parsedUrl = new URL(url, window.location.href);
+            if (parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:") {
+                const link = municipalityNode("a", "", "Abrir fuente oficial");
+                link.href = parsedUrl.href;
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                card.append(link);
+            }
+        } catch (error) {
+            console.warn("URL de normativa inválida:", error);
+        }
+    }
+
+    container.append(card);
+}
+
+function renderMunicipalityTab(tab) {
+    municipalityDialogContent.replaceChildren();
+
+    const loading = municipalityData.loading || {};
+    if (tab === "normativa" && loading.normativa && loading.igac) {
+        municipalityNotice(municipalityDialogContent, "Consultando documentos e instrumentos normativos...");
+        return;
+    }
+    if (tab === "analisis" && loading.profile && loading.normativa && loading.igac) {
+        municipalityNotice(municipalityDialogContent, "Cargando información del municipio...");
+        return;
+    }
+
+    const feature = activeMunicipality || {};
+    const ficha = municipalityData.profile || {};
+    const poblacion = municipalityNumber(ficha.poblacion_2018 ?? feature.poblacion_2018);
+    const area = municipalityNumber(ficha.area_km2);
+    const densidad = poblacion !== null && area !== null && area > 0
+        ? poblacion / area
+        : null;
+    const documentos = municipalityData.normativa?.documentos || [];
+    const instrumentos = municipalityData.igac?.instrumentos || [];
+    const resumenVias = municipalityData.vias;
+
+    if (tab === "informacion") {
+        if (loading.profile) {
+            municipalityNotice(
+                municipalityDialogContent,
+                "Cargando datos complementarios de la ficha. Se muestran mientras tanto los datos disponibles en la capa municipal."
+            );
+        }
+        if (municipalityData.errors?.profile) {
+            municipalityNotice(
+                municipalityDialogContent,
+                `No se pudo cargar la ficha completa (${municipalityData.errors.profile}). Se muestran los datos que acompañaban la geometría cuando están disponibles.`,
+                true
+            );
+        }
+
+        const section = municipalitySection(municipalityDialogContent, "Identificación");
+        municipalityField(section, "Municipio", ficha.nombre || feature.nombre);
+        municipalityField(section, "Departamento", ficha.departamento || feature.departamento);
+        municipalityField(section, "Código DANE", ficha.codigo || feature.codigo);
+
+        const dataSection = municipalitySection(municipalityDialogContent, "Datos disponibles");
+        municipalityField(
+            dataSection,
+            "Población CNPV",
+            poblacion === null ? null : `${municipalityFormatNumber(poblacion)} habitantes`
+        );
+        municipalityField(
+            dataSection,
+            "Área",
+            area === null ? null : `${municipalityFormatNumber(area, 2)} km²`
+        );
+        municipalityField(dataSection, "Año censal", ficha.ano_censo);
+        municipalityField(dataSection, "Fuente", ficha.fuente);
+        municipalityField(
+            dataSection,
+            "Actualización",
+            ficha.fecha_actualizacion || (
+                ficha.fuente_respaldo
+                    ? "No incluida en el GeoPackage local"
+                    : null
+            )
+        );
+        return;
+    }
+
+    if (tab === "indicadores") {
+        if (loading.profile) {
+            municipalityNotice(
+                municipalityDialogContent,
+                "Los indicadores disponibles se muestran mientras se consulta el área municipal."
+            );
+        }
+        const grid = municipalityNode("div", "municipality-metric-grid");
+        municipalityMetric(
+            grid,
+            "Población",
+            poblacion === null ? "No disponible" : `${municipalityFormatNumber(poblacion)} hab.`,
+            "CNPV 2018"
+        );
+        municipalityMetric(
+            grid,
+            "Área municipal",
+            area === null ? "No disponible" : `${municipalityFormatNumber(area, 2)} km²`,
+            ficha.fuente || "Fuente no informada"
+        );
+        municipalityMetric(
+            grid,
+            "Densidad poblacional",
+            densidad === null ? "No disponible" : `${municipalityFormatNumber(densidad, 2)} hab./km²`,
+            "Cálculo: población CNPV 2018 / área municipal"
+        );
+        municipalityDialogContent.append(grid);
+        municipalityNotice(
+            municipalityDialogContent,
+            "La densidad es un cálculo derivado, no un indicador publicado por una entidad. Solo se presenta cuando la población y el área están disponibles."
+        );
+        return;
+    }
+
+    if (tab === "normativa") {
+        if (municipalityData.errors?.normativa) {
+            municipalityNotice(
+                municipalityDialogContent,
+                `No fue posible consultar los documentos normativos (${municipalityData.errors.normativa}).`,
+                true
+            );
+        }
+        if (municipalityData.errors?.igac) {
+            municipalityNotice(
+                municipalityDialogContent,
+                `No fue posible consultar los instrumentos reportados por IGAC (${municipalityData.errors.igac}).`,
+                true
+            );
+        }
+        if (loading.normativa) {
+            municipalityNotice(municipalityDialogContent, "Consultando documentos normativos...");
+        }
+        if (loading.igac) {
+            municipalityNotice(municipalityDialogContent, "Consultando instrumentos reportados por IGAC...");
+        }
+
+        const documentsSection = municipalitySection(
+            municipalityDialogContent,
+            `Documentos registrados (${municipalityData.errors?.normativa ? "No disponible" : documentos.length})`
+        );
+        if (!documentos.length && !loading.normativa && !municipalityData.errors?.normativa) {
+            municipalityNotice(documentsSection, "No hay documentos registrados para este municipio.");
+        }
+        documentos.forEach(function (documento) {
+            municipalityDocument(
+                documentsSection,
+                documento.titulo || documento.tipo_instrumento,
+                [
+                    documento.tipo_instrumento,
+                    documento.acto_administrativo,
+                    documento.fecha_adopcion ? `Adopción: ${documento.fecha_adopcion}` : null,
+                    documento.fecha_vigencia ? `Vigencia: ${documento.fecha_vigencia}` : null,
+                    documento.estado_verificacion
+                        ? `Verificación documental: ${documento.estado_verificacion}`
+                        : null,
+                    documento.observaciones
+                ],
+                documento.url_oficial
+            );
+        });
+
+        const igacSection = municipalitySection(
+            municipalityDialogContent,
+            `Instrumentos reportados por IGAC (${municipalityData.errors?.igac ? "No disponible" : instrumentos.length})`
+        );
+        if (!instrumentos.length && !loading.igac && !municipalityData.errors?.igac) {
+            municipalityNotice(igacSection, "No hay instrumentos IGAC reportados para este municipio.");
+        }
+        instrumentos.forEach(function (instrumento) {
+            municipalityDocument(
+                igacSection,
+                instrumento.tipo_instrumento || "Instrumento IGAC",
+                [
+                    instrumento.acto_administrativo,
+                    instrumento.fecha_adopcion ? `Adopción: ${instrumento.fecha_adopcion}` : null,
+                    instrumento.estado_instrumento_codigo
+                        ? `Estado reportado: ${instrumento.estado_instrumento_codigo}`
+                        : null,
+                    instrumento.vigencia_instrumento_codigo
+                        ? `Vigencia reportada: ${instrumento.vigencia_instrumento_codigo}`
+                        : null,
+                    instrumento.fuente_igac
+                ],
+                null
+            );
+        });
+        municipalityNotice(
+            municipalityDialogContent,
+            "Los códigos y estados de IGAC se muestran como datos reportados; no constituyen por sí solos una verificación jurídica o documental."
+        );
+        return;
+    }
+
+    if (tab === "vias") {
+        if (!String(feature.departamento || "").toLowerCase().includes("antioquia")) {
+            municipalityNotice(
+                municipalityDialogContent,
+                "El resumen de conectividad vial está disponible únicamente para municipios de Antioquia."
+            );
+            return;
+        }
+        if (loading.vias) {
+            municipalityNotice(municipalityDialogContent, "Calculando tramos y conexiones municipales...");
+            return;
+        }
+        if (municipalityData.errors?.vias) {
+            municipalityNotice(
+                municipalityDialogContent,
+                `No fue posible calcular el resumen vial (${municipalityData.errors.vias}).`,
+                true
+            );
+            return;
+        }
+        if (!resumenVias) {
+            municipalityNotice(municipalityDialogContent, "No hay resumen vial disponible para este municipio.");
+            return;
+        }
+
+        municipalityNotice(
+            municipalityDialogContent,
+            "Las vías no se dibujan como capa en el mapa. Aquí se presentan únicamente sus datos e indicadores disponibles de OpenStreetMap."
+        );
+        const grid = municipalityNode("div", "municipality-metric-grid");
+        municipalityMetric(
+            grid,
+            "Tramos OSM en el municipio",
+            municipalityFormatNumber(resumenVias.total_tramos || 0),
+            "Tramos únicos que intersectan su polígono"
+        );
+        municipalityMetric(
+            grid,
+            "Municipios conectados",
+            municipalityFormatNumber(resumenVias.municipios_conectados?.length || 0),
+            "Antioquia"
+        );
+        municipalityDialogContent.append(grid);
+
+        const classesSection = municipalitySection(municipalityDialogContent, "Tramos por clase vial");
+        if (!resumenVias.desglose_clases?.length) {
+            municipalityNotice(classesSection, "No se encontraron tramos para clasificar.");
+        }
+        (resumenVias.desglose_clases || []).forEach(function (item) {
+            municipalityField(
+                classesSection,
+                item.clase,
+                municipalityFormatNumber(item.total_tramos)
+            );
+        });
+
+        const connectionsSection = municipalitySection(
+            municipalityDialogContent,
+            "Conexiones con otros municipios"
+        );
+        if (!resumenVias.municipios_conectados?.length) {
+            municipalityNotice(connectionsSection, "No se encontraron tramos OSM compartidos con otros municipios.");
+        }
+        (resumenVias.municipios_conectados || []).forEach(function (connection) {
+            const card = municipalityNode("article", "municipality-document");
+            card.append(
+                municipalityNode(
+                    "h4",
+                    "",
+                    `${connection.municipio} (${connection.codigo})`
+                ),
+                municipalityNode(
+                    "p",
+                    "",
+                    `${municipalityFormatNumber(connection.tramos_compartidos)} tramos OSM compartidos`
+                )
+            );
+            connectionsSection.append(card);
+        });
+        municipalityNotice(municipalityDialogContent, resumenVias.metodo);
+        return;
+    }
+
+    if (tab === "analisis") {
+        const section = municipalitySection(municipalityDialogContent, "Resumen territorial descriptivo");
+        municipalityField(
+            section,
+            "Densidad calculada",
+            loading.profile
+                ? "Consultando ficha municipal..."
+                : densidad === null
+                    ? "No disponible por falta de población o área"
+                    : `${municipalityFormatNumber(densidad, 2)} hab./km²`
+        );
+        municipalityField(
+            section,
+            "Documentos normativos registrados",
+            loading.normativa
+                ? "Consultando..."
+                : municipalityData.errors?.normativa
+                    ? "No disponible"
+                    : String(documentos.length)
+        );
+        municipalityField(
+            section,
+            "Instrumentos reportados por IGAC",
+            loading.igac
+                ? "Consultando..."
+                : municipalityData.errors?.igac
+                    ? "No disponible"
+                    : String(instrumentos.length)
+        );
+        municipalityField(
+            section,
+            "Tramos viales OSM",
+            loading.vias
+                ? "Consultando..."
+                : municipalityData.errors?.vias
+                    ? "Fuente temporalmente no disponible"
+                    : resumenVias
+                        ? municipalityFormatNumber(resumenVias.total_tramos)
+                        : "Sin resumen vial"
+        );
+        municipalityField(
+            section,
+            "Municipios conectados por vías",
+            loading.vias
+                ? "Consultando..."
+                : resumenVias
+                    ? String(resumenVias.municipios_conectados?.length || 0)
+                    : "No disponible"
+        );
+        municipalityNotice(
+            municipalityDialogContent,
+            "La densidad se calcula con población CNPV 2018 y área del polígono. Los conteos viales provienen de OpenStreetMap. No hay datos conectados de mercado ni usos detallados del suelo, por lo que no se calcula un índice de potencial."
+        );
+        if (municipalityData.errors?.profile || municipalityData.errors?.normativa || municipalityData.errors?.igac || municipalityData.errors?.vias) {
+            municipalityNotice(
+                municipalityDialogContent,
+                "El análisis es parcial porque una o más fuentes no respondieron. Cambia de pestaña para ver el detalle del error.",
+                true
+            );
+        }
+    }
+}
+
+function activarPestanaMunicipio(tab) {
+    document.querySelectorAll("[data-municipality-tab]").forEach(function (button) {
+        button.setAttribute("aria-selected", String(button.dataset.municipalityTab === tab));
+    });
+    renderMunicipalityTab(tab);
+}
+
+async function abrirFichaMunicipal(municipio) {
+    const codigo = String(municipio.codigo || "").trim();
+    if (!codigo) return;
+    const necesitaPerfil = municipio.poblacion_2018 == null
+        || municipio.area_km2 == null
+        || municipio.fuente == null;
+    const esAntioquia = String(municipio.departamento || "")
+        .toLowerCase()
+        .includes("antioquia");
+
+    municipalityControllers.forEach(function (controller) {
+        controller.abort();
+    });
+    municipalityControllers = [];
+
+    const requestId = ++municipalityRequestId;
+    activeMunicipality = municipio;
+    municipalityData = {
+        loading: { profile: necesitaPerfil, normativa: true, igac: true, vias: esAntioquia },
+        errors: {},
+        profile: municipio,
+        normativa: null,
+        igac: null,
+        vias: null
+    };
+    municipalityDialogTitle.textContent = municipio.nombre || "Municipio";
+    municipalityDialogCode.textContent = `Código DANE ${codigo}`;
+    municipalityDialog.hidden = false;
+    municipalityDialog.querySelector("[data-close-municipality]").focus();
+    activarPestanaMunicipio("informacion");
+
+    const cargarJson = async function (ruta) {
+        const controller = new AbortController();
+        municipalityControllers.push(controller);
+        const timeout = window.setTimeout(function () {
+            controller.abort();
+        }, 8000);
+
+        try {
+            const response = await fetch(`http://127.0.0.1:8000${ruta}`, {
+                signal: controller.signal
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data?.detail || `HTTP ${response.status}`);
+            }
+            if (data?.error) throw new Error(data.error);
+            return data;
+        } finally {
+            window.clearTimeout(timeout);
+            municipalityControllers = municipalityControllers.filter(function (item) {
+                return item !== controller;
+            });
+        }
+    };
+
+    const cargarRecurso = async function (clave, ruta) {
+        try {
+            municipalityData[clave] = await cargarJson(ruta);
+        } catch (error) {
+            if (requestId !== municipalityRequestId) return;
+            municipalityData.errors[clave] = error.name === "AbortError"
+                ? "tiempo de espera agotado (8 s)"
+                : error.message;
+        } finally {
+            if (requestId === municipalityRequestId) {
+                municipalityData.loading[clave] = false;
+                const tab = document.querySelector(
+                    '[data-municipality-tab][aria-selected="true"]'
+                )?.dataset.municipalityTab || "informacion";
+                renderMunicipalityTab(tab);
+            }
+        }
+    };
+
+    const recursos = [
+        cargarRecurso("normativa", `/municipios/${encodeURIComponent(codigo)}/normativa`),
+        cargarRecurso("igac", `/municipios/${encodeURIComponent(codigo)}/normativa/igac`)
+    ];
+    if (necesitaPerfil) {
+        recursos.push(
+            cargarRecurso("profile", `/municipios/${encodeURIComponent(codigo)}`)
+        );
+    }
+    if (esAntioquia) {
+        recursos.push(
+            cargarRecurso("vias", `/municipios/${encodeURIComponent(codigo)}/vias-resumen`)
+        );
+    }
+    await Promise.all(recursos);
+}
+
+function cerrarFichaMunicipal() {
+    municipalityRequestId += 1;
+    municipalityControllers.forEach(function (controller) {
+        controller.abort();
+    });
+    municipalityControllers = [];
+    municipalityDialog.hidden = true;
+}
+
+document.querySelectorAll("[data-close-municipality]").forEach(function (button) {
+    button.addEventListener("click", cerrarFichaMunicipal);
+});
+
+document.querySelectorAll("[data-municipality-tab]").forEach(function (button) {
+    button.addEventListener("click", function () {
+        activarPestanaMunicipio(button.dataset.municipalityTab);
+    });
+});
+
+document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && !municipalityDialog.hidden) {
+        cerrarFichaMunicipal();
+    }
+});
+
+document.addEventListener("click", function (event) {
+    const button = event.target.closest?.(".municipality-detail-button");
+    if (!button) return;
+
+    abrirFichaMunicipal({
+        codigo: button.dataset.municipalityCode,
+        nombre: button.dataset.municipalityName,
+        departamento: button.dataset.municipalityDepartment,
+        poblacion_2018: button.dataset.municipalityPopulation,
+        area_km2: button.dataset.municipalityArea,
+        ano_censo: button.dataset.municipalityYear,
+        fuente: button.dataset.municipalitySource,
+        fecha_actualizacion: button.dataset.municipalityUpdated
+    });
+});
+
 fetch(
     "http://127.0.0.1:8000/municipios"
 )
@@ -3372,16 +4689,20 @@ fetch(
     .then(
         function (resultado) {
 
+            // Acepta tanto una lista directa como un objeto con municipios.
+            const listaMunicipios = Array.isArray(resultado)
+                ? resultado
+                : resultado.municipios;
+
             console.log(
                 "Municipios recibidos desde Supabase/PostGIS:",
-                resultado.total
+                listaMunicipios ? listaMunicipios.length : 0
             );
 
 
             if (
-                !resultado.municipios ||
-                resultado.municipios.length ===
-                    0
+                !listaMunicipios ||
+                listaMunicipios.length === 0
             ) {
 
                 throw new Error(
@@ -3396,7 +4717,7 @@ fetch(
                     "FeatureCollection",
 
                 features:
-                    resultado.municipios
+                    listaMunicipios
 
                         .filter(
                             function (
@@ -3429,12 +4750,22 @@ fetch(
                                                 municipio.nombre,
 
                                             departamento:
-                                                obtenerDepartamento(
-                                                    municipio.codigo
-                                                ),
+                                                obtenerDepartamento(municipio.codigo),
 
                                             poblacion_2018:
-                                                municipio.poblacion_2018
+                                                municipio.poblacion_2018,
+
+                                            area_km2:
+                                                municipio.area_km2,
+
+                                            ano_censo:
+                                                municipio.ano_censo,
+
+                                            fuente:
+                                                municipio.fuente,
+
+                                            fecha_actualizacion:
+                                                municipio.fecha_actualizacion
                                         },
 
                                     geometry:
@@ -3443,7 +4774,6 @@ fetch(
                             }
                         )
             };
-
 
             console.log(
                 "GeoJSON de municipios:",
@@ -3479,6 +4809,13 @@ fetch(
                                 const datos =
                                     feature.properties ||
                                     {};
+
+                                layer.on(
+                                    "click",
+                                    function () {
+                                        abrirFichaMunicipal(datos);
+                                    }
+                                );
 
 
                                 layer.bindPopup(`
@@ -3549,6 +4886,22 @@ fetch(
                                             }
 
                                         </p>
+
+
+                                        <button
+                                            type="button"
+                                            class="municipality-detail-button"
+                                            data-municipality-code="${escaparHtmlMunicipio(datos.codigo)}"
+                                            data-municipality-name="${escaparHtmlMunicipio(datos.nombre)}"
+                                            data-municipality-department="${escaparHtmlMunicipio(datos.departamento)}"
+                                            data-municipality-population="${escaparHtmlMunicipio(datos.poblacion_2018)}"
+                                            data-municipality-area="${escaparHtmlMunicipio(datos.area_km2)}"
+                                            data-municipality-year="${escaparHtmlMunicipio(datos.ano_censo)}"
+                                            data-municipality-source="${escaparHtmlMunicipio(datos.fuente)}"
+                                            data-municipality-updated="${escaparHtmlMunicipio(datos.fecha_actualizacion)}"
+                                        >
+                                            Abrir ficha municipal
+                                        </button>
 
 
                                         <hr>
@@ -3656,6 +5009,7 @@ console.log(
 console.log(
     "✓ Municipios disponible"
 );
+
 
 console.log(
     "✓ Reproyección disponible"

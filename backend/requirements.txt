@@ -2,5 +2,7 @@ fastapi
 uvicorn[standard]
 psycopg[binary]
 pyproj
+shapely
 pydantic
 requests
+osmium

@@ -35,21 +35,20 @@
     });
 
     // ------------------------------------------------------------
-    // Búsqueda: busca entidades que ya estén cargadas en Leaflet.
-    // No inventa terrenos ni datos de mercado.
+    // BUSCADOR GEOGRÁFICO INVERSIG
+    // Municipios, coordenadas y direcciones.
     // ------------------------------------------------------------
 
     const searchInput = document.getElementById("globalSearch");
     const searchMessage = document.getElementById("searchMessage");
 
+    let marcadorBusqueda = null;
+    let busquedaEnCurso = false;
+
     function mostrarMensaje(texto) {
         if (!searchMessage) return;
         searchMessage.textContent = texto;
         searchMessage.style.display = "block";
-        clearTimeout(mostrarMensaje.timer);
-        mostrarMensaje.timer = setTimeout(() => {
-            searchMessage.style.display = "none";
-        }, 3500);
     }
 
     function normalizar(valor) {
@@ -60,74 +59,175 @@
             .trim();
     }
 
-    function buscarEnCapas(texto) {
-        if (!window.map || !texto) return null;
+    function centrarEnPunto(lat, lon, zoom = 15) {
+        if (!window.map) {
+            mostrarMensaje("El mapa todavía no está disponible.");
+            return;
+        }
 
-        const q = normalizar(texto);
-        let encontrado = null;
+        window.map.setView([lat, lon], zoom);
 
-        window.map.eachLayer((layer) => {
-            if (encontrado || !layer.feature) return;
+        if (marcadorBusqueda) {
+            window.map.removeLayer(marcadorBusqueda);
+        }
 
-            const props = layer.feature.properties || {};
-            const valores = Object.values(props).map(normalizar);
+        marcadorBusqueda = L.marker([lat, lon])
+            .addTo(window.map)
+            .bindPopup(
+                `<strong>Ubicación encontrada</strong><br>
+                 Latitud: ${lat.toFixed(6)}<br>
+                 Longitud: ${lon.toFixed(6)}`
+            )
+            .openPopup();
 
-            if (valores.some((valor) => valor.includes(q))) {
-                encontrado = layer;
-            }
-        });
-
-        return encontrado;
+        mostrarMensaje(
+            `Ubicación: ${lat.toFixed(6)}, ${lon.toFixed(6)}`
+        );
     }
 
-    function ejecutarBusqueda() {
+    async function ejecutarBusqueda() {
         const texto = searchInput?.value?.trim();
 
-        if (!texto) {
-            mostrarMensaje("Escribe un municipio, nombre o código para buscar.");
+        if (!texto || busquedaEnCurso) {
+            if (!texto) mostrarMensaje("Escribe un municipio, dirección o coordenadas.");
             return;
         }
 
-        const encontrado = buscarEnCapas(texto);
+        if (!window.map) {
+            mostrarMensaje("El mapa todavía no está disponible.");
+            return;
+        }
 
-        if (!encontrado) {
-            mostrarMensaje(
-                "No se encontró en las capas cargadas. La búsqueda de terrenos reales se conectará en la siguiente fase."
+        busquedaEnCurso = true;
+        mostrarMensaje("Buscando ubicación...");
+
+        try {
+            // 1. Coordenadas: latitud, longitud
+            const coincidencia = texto.match(
+                /^\s*(-?\d{1,2}(?:\.\d+)?)\s*[,;]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/
             );
-            return;
-        }
 
-        activarVista("explore");
+            if (coincidencia) {
+                const lat = Number(coincidencia[1]);
+                const lon = Number(coincidencia[2]);
 
-        if (typeof encontrado.getBounds === "function") {
-            const bounds = encontrado.getBounds();
-            if (bounds && bounds.isValid && bounds.isValid()) {
-                window.map.fitBounds(bounds, { padding: [50, 50] });
+                if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+                    mostrarMensaje("Las coordenadas están fuera de los rangos válidos.");
+                    return;
+                }
+
+                centrarEnPunto(lat, lon);
+                return;
             }
-        } else if (typeof encontrado.getLatLng === "function") {
-            window.map.setView(encontrado.getLatLng(), 12);
-        }
 
-        if (typeof encontrado.openPopup === "function") {
-            encontrado.openPopup();
-        }
+            // 2. Buscar municipios en el catálogo existente
+            const respuesta = await fetch(
+                "http://127.0.0.1:8000/municipios/catalogo"
+            );
 
-        mostrarMensaje("Ubicación encontrada en las capas cargadas.");
+            if (!respuesta.ok) {
+                throw new Error("No se pudo consultar el catálogo de municipios.");
+            }
+
+            const municipios = await respuesta.json();
+            const consulta = normalizar(texto);
+
+            const municipio = municipios.find(
+                item => normalizar(item.nombre) === consulta
+            ) || municipios.find(
+                item => normalizar(item.nombre).includes(consulta)
+            );
+
+            if (municipio) {
+                // El polígono se busca en la capa municipal cargada
+                let capaEncontrada = null;
+
+                window.map.eachLayer(layer => {
+                    if (!layer.feature || capaEncontrada) return;
+
+                    const props = layer.feature.properties || {};
+
+                    if (
+                        String(props.codigo) === String(municipio.codigo) ||
+                        normalizar(props.nombre) === normalizar(municipio.nombre)
+                    ) {
+                        capaEncontrada = layer;
+                    }
+                });
+
+                if (capaEncontrada) {
+                    const bounds = capaEncontrada.getBounds();
+
+                    if (bounds?.isValid()) {
+                        window.map.fitBounds(bounds, {
+                            padding: [35, 35],
+                            maxZoom: 12
+                        });
+                    }
+
+                    capaEncontrada.openPopup?.();
+
+                    mostrarMensaje(
+                        `Municipio encontrado: ${municipio.nombre}`
+                    );
+                } else {
+                    mostrarMensaje(
+                        `Encontrado ${municipio.nombre}, pero su geometría aún no está cargada en el mapa.`
+                    );
+                }
+
+                return;
+            }
+
+            // 3. Buscar dirección o lugar mediante geocodificación
+            const url = new URL(
+                "https://nominatim.openstreetmap.org/search"
+            );
+
+            url.search = new URLSearchParams({
+                q: `${texto}, Colombia`,
+                format: "jsonv2",
+                limit: "1",
+                countrycodes: "co"
+            }).toString();
+
+            const geoRespuesta = await fetch(url);
+
+            if (!geoRespuesta.ok) {
+                throw new Error("No fue posible consultar el servicio de direcciones.");
+            }
+
+            const resultados = await geoRespuesta.json();
+
+            if (!resultados.length) {
+                mostrarMensaje("No encontramos esa ubicación. Prueba con otro nombre o una dirección más completa.");
+                return;
+            }
+
+            const lugar = resultados[0];
+
+            centrarEnPunto(
+                Number(lugar.lat),
+                Number(lugar.lon),
+                16
+            );
+
+            mostrarMensaje(`Ubicación encontrada: ${lugar.display_name}`);
+
+        } catch (error) {
+            console.error("Error en el buscador INVERSIG:", error);
+            mostrarMensaje(
+                "No se pudo completar la búsqueda. Verifica la conexión e inténtalo nuevamente."
+            );
+        } finally {
+            busquedaEnCurso = false;
+        }
     }
 
     if (searchInput) {
-        searchInput.addEventListener("keydown", (event) => {
+        searchInput.addEventListener("keydown", event => {
             if (event.key === "Enter") ejecutarBusqueda();
         });
-    }
-
-    // Botón de captura del diseño: reutiliza el botón que app.js ya controla.
-    const mapCaptureButton = document.getElementById("mapCaptureButton");
-    const legacyCapture = [...document.querySelectorAll(".tool-button")]
-        .find((button) => button.textContent.includes("Capturar Coordenadas"));
-
-    if (mapCaptureButton && legacyCapture) {
-        mapCaptureButton.addEventListener("click", () => legacyCapture.click());
     }
 
     // Filtros: por ahora validan que no se presenten resultados ficticios.

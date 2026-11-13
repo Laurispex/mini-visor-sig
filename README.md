@@ -4,9 +4,17 @@ Mini visor geográfico web para carga, visualización y reproyección de capas S
 
 ## Datos geográficos
 
-Capitales, ciudades y municipios se consultan mediante FastAPI desde Supabase
-PostgreSQL + PostGIS. El backend usa `ST_AsGeoJSON(geom)` para entregar
-GeoJSON a Leaflet en EPSG:4326. La reproyección sigue en `/reproject` con PyProj.
+Los municipios, la normativa y las vías se consultan mediante FastAPI desde
+Supabase PostgreSQL + PostGIS. El mapa muestra las 32 capitales departamentales
+desde `data/capitales_departamentales.geojson`. Al tocar una capital, el botón
+`Municipios` despliega el catálogo del departamento; al elegir un municipio se
+abre su ficha por código DANE.
+
+El catálogo ligero se consulta desde Supabase y usa `data/municipios_atlas.gpkg`
+como respaldo local. La capa de centros poblados OSM no se dibuja en el mapa.
+
+El backend usa `ST_AsGeoJSON(geom)` para entregar los polígonos municipales a
+Leaflet en EPSG:4326. La reproyección sigue en `/reproject` con PyProj.
 
 Configure esta variable de entorno exclusivamente en el backend:
 
@@ -16,30 +24,13 @@ SUPABASE_DB_URL=postgresql://postgres.[project-ref]:[password]@[host]:5432/postg
 
 Nunca exponga esta variable ni una clave `service_role` en el frontend.
 
-Las tablas consultadas son:
+Las tablas principales consultadas por el backend son:
 
-- `public."capitales_departamentales — Capitales Departamentales"`
-- `public.ciudades`
-- `public."municipios_atlas — municipios"`
+- `public.municipios`
+- `public.normativa_documentos`
+- `public.vias_osm`
+- `public.vw_igac_instrumentos_normativa`
 
-Active RLS y conceda únicamente lectura pública si las capas son públicas:
-
-```sql
-alter table public."capitales_departamentales — Capitales Departamentales" enable row level security;
-alter table public.ciudades enable row level security;
-alter table public."municipios_atlas — municipios" enable row level security;
-
-create policy "lectura publica capitales"
-on public."capitales_departamentales — Capitales Departamentales"
-for select to anon using (true);
-
-create policy "lectura publica ciudades"
-on public.ciudades
-for select to anon using (true);
-
-create policy "lectura publica municipios"
-on public."municipios_atlas — municipios"
-for select to anon using (true);
-```
-
-No cree políticas de inserción, actualización ni borrado para este visor.
+La conexión a Supabase ocurre únicamente en el backend; no hacen falta políticas
+RLS para exponer la cadena de conexión al navegador. Mantenga la URI fuera del
+frontend y no la publique en logs o capturas.
