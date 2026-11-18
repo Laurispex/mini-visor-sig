@@ -122,7 +122,7 @@
 
             // 2. Buscar municipios en el catálogo existente
             const respuesta = await fetch(
-                "http://127.0.0.1:8000/municipios/catalogo"
+                "https://mini-visor-sig.onrender.com/municipios/catalogo"
             );
 
             if (!respuesta.ok) {

@@ -319,7 +319,7 @@ async function resaltarMunicipioVixora(municipioSlug) {
     const codigo = CODIGOS_MUNICIPIOS_VIXORA[municipioSlug];
     if (!codigo) return;
 
-    const response = await fetch(`http://127.0.0.1:8000/municipios/${codigo}/geometria`);
+    const response = await fetch(`https://mini-visor-sig.onrender.com/municipios/${codigo}/geometria`);
     if (!response.ok) throw new Error("No fue posible cargar el límite geográfico del municipio.");
     const geojson = await response.json();
 
@@ -444,7 +444,7 @@ async function buscarTerrenosVixora() {
             vixoraMunicipalityLayer = null;
         }
 
-        const response = await fetch(`http://127.0.0.1:8000/fuentes/vixora/propiedades?${params.toString()}`);
+        const response = await fetch(`https://mini-visor-sig.onrender.com/fuentes/vixora/propiedades?${params.toString()}`);
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.detail || `Error HTTP ${response.status}`);
         vixoraLastResults = Array.isArray(payload.data) ? payload.data : [];
@@ -1227,7 +1227,7 @@ function obtenerAliasCapital(nombre) {
 }
 
 const municipiosCatalogoPromise = fetch(
-    "http://127.0.0.1:8000/municipios/catalogo"
+    "https://mini-visor-sig.onrender.com/municipios/catalogo"
 ).then(function (response) {
     if (!response.ok) {
         throw new Error("No se pudo cargar el catálogo de municipios.");
@@ -1352,7 +1352,7 @@ document.addEventListener("change", function (event) {
 });
 
 fetch(
-    "http://127.0.0.1:8000/capitales-departamentales"
+    "https://mini-visor-sig.onrender.com/capitales-departamentales"
 )
 
     .then(
@@ -1882,7 +1882,7 @@ function abrirVentanaReproyeccion(
 
                     const response =
                         await fetch(
-                            "http://127.0.0.1:8000/reproject",
+                            "https://mini-visor-sig.onrender.com/reproject",
                             {
 
                                 method:
@@ -2378,7 +2378,7 @@ if (
                     );
 
                     const reproyeccionResponse = await fetch(
-                        "http://127.0.0.1:8000/reproject",
+                        "https://mini-visor-sig.onrender.com/reproject",
                         {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
@@ -3281,7 +3281,7 @@ map.on(
 
                             const response =
                                 await fetch(
-                                    "http://127.0.0.1:8000/reproject",
+                                    "https://mini-visor-sig.onrender.com/reproject",
                                     {
 
                                         method:
@@ -4573,7 +4573,7 @@ async function abrirFichaMunicipal(municipio) {
         }, 8000);
 
         try {
-            const response = await fetch(`http://127.0.0.1:8000${ruta}`, {
+            const response = await fetch(`https://mini-visor-sig.onrender.com${ruta}`, {
                 signal: controller.signal
             });
             const data = await response.json();
@@ -4668,7 +4668,7 @@ document.addEventListener("click", function (event) {
 });
 
 fetch(
-    "http://127.0.0.1:8000/municipios"
+    "https://mini-visor-sig.onrender.com/municipios"
 )
 
     .then(
